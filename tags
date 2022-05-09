@@ -1,0 +1,29 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_PROGRAM_AUTHOR	Darren Hiebert	/dhiebert@users.sourceforge.net/
+!_TAG_PROGRAM_NAME	Exuberant Ctags	//
+!_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
+!_TAG_PROGRAM_VERSION	5.9~svn20110310	//
+_start	bubblesort/main.asm	/^_start:$/;"	l
+_start	intri/main.asm	/^_start:$/;"	l
+arr	bubblesort/main.asm	/^arr:  db 7, 5, 6, 7, 3, 2, 9, 5$/;"	d
+arrlen	bubblesort/main.asm	/^arrlen: equ $ - arr$/;"	d
+global	bubblesort/main.asm	/^global _start$/;"	l
+global	intri/main.asm	/^global _start$/;"	l
+len1	intri/main.asm	/^len1 equ $ - msg1$/;"	d
+len2	intri/main.asm	/^len2 equ $ - msg2$/;"	d
+len3	intri/main.asm	/^len3 equ $ - msg3$/;"	d
+loop1	bubblesort/main.asm	/^loop1:  $/;"	l
+loop2	bubblesort/main.asm	/^loop2:  $/;"	l
+msg1	intri/main.asm	/^msg1 db "less", 10$/;"	d
+msg2	intri/main.asm	/^msg2 db "greater", 10$/;"	d
+msg3	intri/main.asm	/^msg3 db "equal", 10$/;"	d
+noswap	bubblesort/main.asm	/^noswap: $/;"	l
+section	bubblesort/main.asm	/^section .data$/;"	l
+section	bubblesort/main.asm	/^section .text$/;"	l
+section	intri/main.asm	/^section .data$/;"	l
+section	intri/main.asm	/^section .text$/;"	l
+space	bubblesort/main.asm	/^space:  db 32$/;"	d
+top	bubblesort/main.asm	/^top: $/;"	l
+x	intri/main.asm	/^x dt 3.14$/;"	d
+y	intri/main.asm	/^y dt 3.14$/;"	d
