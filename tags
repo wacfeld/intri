@@ -5,25 +5,45 @@
 !_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
 !_TAG_PROGRAM_VERSION	5.9~svn20110310	//
 _start	bubblesort/main.asm	/^_start:$/;"	l
+_start	intri/floatcomp.asm	/^_start:$/;"	l
 _start	intri/main.asm	/^_start:$/;"	l
+a	intri/main.asm	/^a dt -2.0$/;"	d
 arr	bubblesort/main.asm	/^arr:  db 7, 5, 6, 7, 3, 2, 9, 5$/;"	d
 arrlen	bubblesort/main.asm	/^arrlen: equ $ - arr$/;"	d
+b	intri/main.asm	/^b dt 4.0$/;"	d
+c	intri/main.asm	/^c dt 0.0$/;"	d
+cross	intri/main.asm	/^cross:$/;"	l
+dotp	intri/main.asm	/^dotp:$/;"	l
 global	bubblesort/main.asm	/^global _start$/;"	l
+global	intri/floatcomp.asm	/^global _start$/;"	l
 global	intri/main.asm	/^global _start$/;"	l
+len1	intri/floatcomp.asm	/^len1 equ $ - msg1$/;"	d
 len1	intri/main.asm	/^len1 equ $ - msg1$/;"	d
+len2	intri/floatcomp.asm	/^len2 equ $ - msg2$/;"	d
 len2	intri/main.asm	/^len2 equ $ - msg2$/;"	d
+len3	intri/floatcomp.asm	/^len3 equ $ - msg3$/;"	d
 len3	intri/main.asm	/^len3 equ $ - msg3$/;"	d
 loop1	bubblesort/main.asm	/^loop1:  $/;"	l
 loop2	bubblesort/main.asm	/^loop2:  $/;"	l
+msg1	intri/floatcomp.asm	/^msg1 db "less", 10$/;"	d
 msg1	intri/main.asm	/^msg1 db "less", 10$/;"	d
-msg2	intri/main.asm	/^msg2 db "greater", 10$/;"	d
-msg3	intri/main.asm	/^msg3 db "equal", 10$/;"	d
+msg2	intri/floatcomp.asm	/^msg2 db "greater", 10$/;"	d
+msg2	intri/main.asm	/^msg2 db "eq", 10$/;"	d
+msg3	intri/floatcomp.asm	/^msg3 db "equal", 10$/;"	d
+msg3	intri/main.asm	/^msg3 db "great", 10$/;"	d
+norm	intri/main.asm	/^norm:$/;"	l
 noswap	bubblesort/main.asm	/^noswap: $/;"	l
 section	bubblesort/main.asm	/^section .data$/;"	l
 section	bubblesort/main.asm	/^section .text$/;"	l
+section	intri/floatcomp.asm	/^section .data$/;"	l
+section	intri/floatcomp.asm	/^section .text$/;"	l
 section	intri/main.asm	/^section .data$/;"	l
 section	intri/main.asm	/^section .text$/;"	l
 space	bubblesort/main.asm	/^space:  db 32$/;"	d
+sqrt2	intri/main.asm	/^sqrt2 dt 1.414$/;"	d
 top	bubblesort/main.asm	/^top: $/;"	l
-x	intri/main.asm	/^x dt 3.14$/;"	d
-y	intri/main.asm	/^y dt 3.14$/;"	d
+x	intri/floatcomp.asm	/^x dt 3.14$/;"	d
+x	intri/main.asm	/^x dt 4.1$/;"	d
+y	intri/floatcomp.asm	/^y dt 3.14$/;"	d
+y	intri/main.asm	/^y dt 2.0$/;"	d
+z	intri/main.asm	/^z dt 0.0$/;"	d

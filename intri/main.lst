@@ -1,64 +1,111 @@
      1                                  section .data
-     2 00000000 C3F5285C8FC2F5C800-     x dt 3.14
-     2 00000009 40                 
-     3 0000000A C3F5285C8FC2F5C800-     y dt 3.14
+     2 00000000 C1CAA145B6F3FDB4FF-     sqrt2 dt 1.414
+     2 00000009 3F                 
+     3 0000000A 333333333333338301-     x dt 4.1
      3 00000013 40                 
-     4 00000014 6C6573730A              msg1 db "less", 10
-     5                                  len1 equ $ - msg1
-     6 00000019 677265617465720A        msg2 db "greater", 10
-     7                                  len2 equ $ - msg2
-     8 00000021 657175616C0A            msg3 db "equal", 10
-     9                                  len3 equ $ - msg3
+     4 00000014 000000000000008000-     y dt 2.0
+     4 0000001D 40                 
+     5 0000001E 000000000000000000-     z dt 0.0
+     5 00000027 00                 
+     6                                  
+     7 00000028 000000000000008000-     a dt -2.0
+     7 00000031 C0                 
+     8 00000032 000000000000008001-     b dt 4.0
+     8 0000003B 40                 
+     9 0000003C 000000000000000000-     c dt 0.0
+     9 00000045 00                 
     10                                  
-    11                                  section .text
-    12                                  global _start
-    13                                  
-    14                                  ;------------------------------------------------------------------------------
-    15                                  ; PROCEDURE:    norm
-    16                                  ; IN:           eax, ebx, ecx: x, y, z
-    17                                  ; OUT:          
-    18                                  ; MODIFIES:     
-    19                                  ; CALLS:        
-    20                                  ; DETAILS:      
-    21                                  ; norm:
-    22                                  
-    23                                  
-    24                                  _start:
-    25 00000000 9BDBE3                    finit
-    26                                    
-    27 00000003 DB2C25[0A000000]          fld tword [y]  ; y
-    28 0000000A DB2C25[00000000]          fld tword [x] ; x y
-    29 00000011 DBF1                      fcomi st1      ; comp x with y
-    30 00000013 7204                      jb .less       ; x < y
-    31 00000015 7732                      ja .great      ; x > y
-    32 00000017 7418                      je .eq         ; x == y
-    33                                  
-    34                                  .less:
-    35 00000019 B804000000                mov eax, 4
-    36 0000001E BB01000000                mov ebx, 1
-    37 00000023 B9[14000000]              mov ecx, msg1
-    38 00000028 BA05000000                mov edx, len1
-    39 0000002D CD80                      int 80h
-    40 0000002F EB30                      jmp .exit
-    41                                  
-    42                                  .eq:
-    43 00000031 B804000000                mov eax, 4
-    44 00000036 BB01000000                mov ebx, 1
-    45 0000003B B9[21000000]              mov ecx, msg3
-    46 00000040 BA06000000                mov edx, len3
-    47 00000045 CD80                      int 80h
-    48 00000047 EB18                      jmp .exit
-    49                                  
-    50                                  .great:
-    51 00000049 B804000000                mov eax, 4
-    52 0000004E BB01000000                mov ebx, 1
-    53 00000053 B9[19000000]              mov ecx, msg2
-    54 00000058 BA08000000                mov edx, len2
-    55 0000005D CD80                      int 80h
-    56 0000005F EB00                      jmp .exit
+    11 00000046 6C6573730A              msg1 db "less", 10
+    12                                  len1 equ $ - msg1
+    13 0000004B 65710A                  msg2 db "eq", 10
+    14                                  len2 equ $ - msg2
+    15 0000004E 67726561740A            msg3 db "great", 10
+    16                                  len3 equ $ - msg3
+    17                                  
+    18                                  section .text
+    19                                  global _start
+    20                                  
+    21                                  ;------------------------------------------------------------------------------
+    22                                  ; PROCEDURE:    norm
+    23                                  ; IN:           st0, st1, st2: x, y, z
+    24                                  ; OUT:          st0: |(x,y,z)|
+    25                                  ; MODIFIES:     st0-3
+    26                                  ; CALLS:        none
+    27                                  ; DETAILS:      sqrt(x*x + y*y + z*z)
+    28                                  norm:
+    29 00000000 DDD3                      fst   st3 ; x y z x
+    30 00000002 DECB                      fmulp st3 ; y z x*x
+    31 00000004 DDD3                      fst   st3 ; y z x*x y
+    32 00000006 DECB                      fmulp st3 ; z x*x y*y
+    33 00000008 DDD3                      fst   st3 ; z x*x y*y z
+    34 0000000A DECB                      fmulp st3 ; x*x y*y z*z
+    35 0000000C DEC1                      faddp st1 ; x*x+y*y z*z
+    36 0000000E DEC1                      faddp st1 ; x*x+y*y+z*z
+    37 00000010 D9FA                      fsqrt     ; sqrt(...)
+    38                                  
+    39 00000012 C3                        ret       ; leave
+    40                                  
+    41                                  ;------------------------------------------------------------------------------
+    42                                  ; PROCEDURE:    dotp
+    43                                  ; IN:           st0-2: v, st3-5: w
+    44                                  ; OUT:          st0: v . w
+    45                                  ; MODIFIES:     st0-5
+    46                                  ; CALLS:        
+    47                                  ; DETAILS:      dot product
+    48                                  dotp:
+    49                                    ; x y z a b c
+    50 00000013 DECB                      fmulp st3 ; y z x*a b c
+    51 00000015 DECB                      fmulp st3 ; z x*a y*b c
+    52 00000017 DECB                      fmulp st3 ; x*a y*b z*c
+    53 00000019 DEC1                      faddp st1 ; x*a+y*b z*c
+    54 0000001B DEC1                      faddp st1 ; x*a+y*b+z*c
+    55                                  
+    56 0000001D C3                        ret
     57                                  
-    58                                  .exit:
-    59 00000061 B801000000                mov rax, 1
-    60 00000066 BB00000000                mov rbx, 0
-    61 0000006B CD80                      int 80h
-    62                                  
+    58                                  _start:
+    59 0000001E 9BDBE3                    finit ; reset fpuregs
+    60 00000021 DB2C25[0A000000]          fld tword [x]
+    61 00000028 DB2C25[14000000]          fld tword [y]
+    62 0000002F DB2C25[1E000000]          fld tword [z]
+    63 00000036 DB2C25[28000000]          fld tword [a]
+    64 0000003D DB2C25[32000000]          fld tword [b]
+    65 00000044 DB2C25[3C000000]          fld tword [c] ; c b a z y x
+    66 0000004B E8C3FFFFFF                call dotp     ; dotp
+    67                                  
+    68 00000050 D9EE                      fldz          ; 0 dotp
+    69                                    
+    70 00000052 DBF1                      fcomi st1     ; 0 ? dotp
+    71 00000054 7204                      jb .less
+    72 00000056 741A                      je .eq
+    73 00000058 7730                      ja .great
+    74                                    
+    75                                  .less:
+    76 0000005A B804000000                mov eax, 4
+    77 0000005F BB01000000                mov ebx, 1
+    78 00000064 B9[46000000]              mov ecx, msg1
+    79 00000069 BA05000000                mov edx, len1
+    80 0000006E CD80                      int 80h
+    81 00000070 EB30                      jmp .exit
+    82                                  
+    83                                  .eq:
+    84 00000072 B804000000                mov eax, 4
+    85 00000077 BB01000000                mov ebx, 1
+    86 0000007C B9[4B000000]              mov ecx, msg2
+    87 00000081 BA03000000                mov edx, len2
+    88 00000086 CD80                      int 80h
+    89 00000088 EB18                      jmp .exit
+    90                                  
+    91                                  .great:
+    92 0000008A B804000000                mov eax, 4
+    93 0000008F BB01000000                mov ebx, 1
+    94 00000094 B9[4E000000]              mov ecx, msg3
+    95 00000099 BA06000000                mov edx, len3
+    96 0000009E CD80                      int 80h
+    97 000000A0 EB00                      jmp .exit
+    98                                  
+    99                                  
+   100                                  .exit:
+   101 000000A2 B801000000                mov rax, 1
+   102 000000A7 BB00000000                mov rbx, 0
+   103 000000AC CD80                      int 80h
+   104                                  
