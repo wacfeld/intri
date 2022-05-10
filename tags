@@ -12,8 +12,12 @@ arr	bubblesort/main.asm	/^arr:  db 7, 5, 6, 7, 3, 2, 9, 5$/;"	d
 arrlen	bubblesort/main.asm	/^arrlen: equ $ - arr$/;"	d
 b	intri/main.asm	/^b dt 2.0$/;"	d
 c	intri/main.asm	/^c dt 1.0$/;"	d
+c	intri/main.asm	/^c rest 3$/;"	l
 cross	intri/main.asm	/^cross:$/;"	l
+d	intri/main.asm	/^d dt 6.0$/;"	d
 dotp	intri/main.asm	/^dotp:$/;"	l
+e	intri/main.asm	/^e dt 3.0$/;"	d
+f	intri/main.asm	/^f dt -1.0$/;"	d
 finv	intri/main.asm	/^finv:$/;"	l
 global	bubblesort/main.asm	/^global _start$/;"	l
 global	intri/floatcomp.asm	/^global _start$/;"	l
@@ -33,7 +37,6 @@ msg2	intri/main.asm	/^msg2 db "eq", 10$/;"	d
 msg3	intri/floatcomp.asm	/^msg3 db "equal", 10$/;"	d
 msg3	intri/main.asm	/^msg3 db "great", 10$/;"	d
 norm	intri/main.asm	/^norm:$/;"	l
-normal	intri/main.asm	/^normal:$/;"	l
 noswap	bubblesort/main.asm	/^noswap: $/;"	l
 num	intri/main.asm	/^num dt -6.0$/;"	d
 origin	intri/main.asm	/^origin dt 0.0, 0.0, 0.0$/;"	d
@@ -42,6 +45,7 @@ section	bubblesort/main.asm	/^section .data$/;"	l
 section	bubblesort/main.asm	/^section .text$/;"	l
 section	intri/floatcomp.asm	/^section .data$/;"	l
 section	intri/floatcomp.asm	/^section .text$/;"	l
+section	intri/main.asm	/^section .bss$/;"	l
 section	intri/main.asm	/^section .data$/;"	l
 section	intri/main.asm	/^section .text$/;"	l
 space	bubblesort/main.asm	/^space:  db 32$/;"	d
@@ -50,7 +54,6 @@ v1	intri/main.asm	/^v1 dt 1.0, 0.0, 0.0$/;"	d
 v2	intri/main.asm	/^v2 dt 0.0, 1.0, 0.0$/;"	d
 v3	intri/main.asm	/^v3 dt 0.0, 0.0, 1.0$/;"	d
 vadd	intri/main.asm	/^vadd:$/;"	l
-vload	intri/main.asm	/^vload:$/;"	l
 vmul	intri/main.asm	/^vmul:$/;"	l
 vsub	intri/main.asm	/^vsub:$/;"	l
 x	intri/floatcomp.asm	/^x dt 3.14$/;"	d

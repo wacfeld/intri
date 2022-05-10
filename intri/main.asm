@@ -17,6 +17,10 @@ a dt 4.0
 b dt 2.0
 c dt 1.0
 
+d dt 6.0
+e dt 3.0
+f dt -1.0
+
 origin dt 0.0, 0.0, 0.0
 
 v1 dt 1.0, 0.0, 0.0
@@ -32,7 +36,8 @@ len2 equ $ - msg2
 msg3 db "great", 10
 len3 equ $ - msg3
 
-; section .bss
+section .bss
+c rest 3
 
 ; ; 3 vectors defining a triangle
 ; p1 rest 3
@@ -191,17 +196,25 @@ cross:
 
 ;------------------------------------------------------------------------------
 ; PROCEDURE:    vload
-; IN:           rax: address of vector
+; IN:           address of vector
 ; OUT:          st0-2: components of vector
 ; MODIFIES:     st0-7
 ; CALLS:        none
 ; DETAILS:      
-vload:
-  fld tword [rax + 20]
-  fld tword [rax + 10]
-  fld tword [rax]
+%macro vload 1
+  fld tword [%1 + 20]
+  fld tword [%1 + 10]
+  fld tword [%1]
 
-  ret
+%endmacro
+
+;------------------------------------------------------------------------------
+; PROCEDURE:    vstore
+; IN:           
+; OUT:          
+; MODIFIES:     
+; CALLS:        
+; DETAILS:      
 
 ;------------------------------------------------------------------------------
 ; PROCEDURE:    vpush
@@ -234,38 +247,72 @@ vload:
 
 ;------------------------------------------------------------------------------
 ; PROCEDURE:    normal
-; IN:           rax-rcx: addresses of 3 vectors
+; IN:           3 addresses of vectors
 ; OUT:          st0-2: normal vector to plane defined by 3 vectors
 ; MODIFIES:     st0-7
 ; CALLS:        
 ; DETAILS:      
-normal:
-  call vload ; v1 . .
-  mov rax, rbx
-  call vload ; v2 . . v1 . .
+%macro normal 3
+  vload %1   ; v1 . .
+  vload %2   ; v2 . . v1 . .
 
-  call vsub  ; v2-v1 . .
+  call  vsub  ; v2-v1 . .
 
-  mov rax, rcx ; v3 . . v2-v1 . .
+  vpush       ; 
+
+  vload %1   ; v1 . .
+  vload %3   ; v3 . .
+
+  call  vsub  ; v3-v1 . .
+
+  vpop        ; v2-v1 . . v3-v1 . .
+
+  call  cross ; n
   
+%endmacro
+  
+;------------------------------------------------------------------------------
+; PROCEDURE:    center
+; IN:           addresses of 3 vectors
+; OUT:          st0-2: average of 3 vectors
+; MODIFIES:     st0-7
+; CALLS:        
+; DETAILS:      
+%macro center 3
+  vload %1 ; v1
+  vload %2 ; v2 v1
+  call vadd ; v1+v2
+  vload %3 ; v3 v1+v2
+  call vadd ; v1+v2+v3
+  
+  ; sum = v1+v2+v3
+
+  ; obtain the number 3...
+  fld1 ; 1 sum
+  fadd st0 ; 2 sum
+  fld1 st0 ; 1 2 sum
+  faddp st1 ; 3 sum
+  call finv ; 1/3 sum ; TODO optimize by computing 1/3 beforehand
+  call vmul ; 1/3*sum
+%endmacro
+  
+; TODO make everything macros
+; TODO optimize
 
 _start:
   finit ; reset fpuregs
-  
-  mov rax, x
-  call vload
-  vpush
+  normal v1 v2 origin ; n1
+  vpush ; n1
+  normal v1 v3 origin ; n2
+  vpush ; n2 n1
+  normal v2 v3 origin ; n3
+  vpush ; n3 n2 n1
 
-  mov rax, a
-  call vload
-  vpop
-
-  call vsub
-
-  fldz
+  center v1 v2 v3 ; c
   
   
-  fcomi st1     ; 0 ? dotp
+.comp:
+  fcomi st1
   jb .less
   je .eq
   ja .great
