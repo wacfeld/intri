@@ -7,27 +7,27 @@
 ;------------------------------------------------------------------------------
 section .data
 
-num dt -6.0
+; num dt -6.0
 
-x dt 5.0
-y dt 3.0
-z dt 2.0
+; x dt 5.0
+; y dt 3.0
+; z dt 2.0
 
-a dt 4.0
-b dt 2.0
-c dt 1.0
+; a dt 4.0
+; b dt 2.0
+; c dt 1.0
 
-d dt 6.0
-e dt 3.0
-f dt -1.0
+; d dt 6.0
+; e dt 3.0
+; f dt -1.0
 
 origin dt 0.0, 0.0, 0.0
+; G=(-0.93,0.22,-0.29)
+v1 dt -0.93, 0.22, -0.29
+v2 dt -0.76, -0.41, -0.51
+v3 dt -0.67, 0.1, -0.74
 
-v1 dt 1.0, 0.0, 0.0
-v2 dt 0.0, 1.0, 0.0
-v3 dt 0.0, 0.0, 1.0
-
-p dt 1.0, 1.0, 1.0
+p dt -0.92, 0.16, -0.37
 
 msg1 db "less", 10
 len1 equ $ - msg1
@@ -36,14 +36,19 @@ len2 equ $ - msg2
 msg3 db "great", 10
 len3 equ $ - msg3
 
-fail db "fails test", 10
-faillen equ $ - msg1
+failmsg db "fails test", 10
+faillen equ $ - failmsg
+
+successmsg db "passes test", 10
+successlen equ $ - successmsg
 
 section .bss
 c rest 3
+temp111 rest 300
 n1 rest 3
 n2 rest 3
 n3 rest 3
+temp222 rest 300
 
 ; ; 3 vectors defining a triangle
 ; p1 rest 3
@@ -145,7 +150,7 @@ vmul:
 ; DETAILS:      
 finv:
   fld1 ; 1 c
-  fdiv st1
+  fdivrp st1
   
   ret
 
@@ -222,9 +227,9 @@ cross:
 ; CALLS:        
 ; DETAILS:      stores in address, pops from fpu stack
 %macro vstore 1
-  fstp [%1]
-  fstp [%1+10]
-  fstp [%1+20]
+  fstp tword [%1]
+  fstp tword [%1+10]
+  fstp tword [%1+20]
 %endmacro
 
 
@@ -302,11 +307,49 @@ cross:
   ; obtain the number 3...
   fld1 ; 1 sum
   fadd st0 ; 2 sum
-  fld1 st0 ; 1 2 sum
+  fld1 ; 1 2 sum
   faddp st1 ; 3 sum
   call finv ; 1/3 sum ; TODO optimize by computing 1/3 beforehand
   call vmul ; 1/3*sum
 %endmacro
+
+;------------------------------------------------------------------------------
+; PROCEDURE:    samesign
+; IN:           st0-1: two floats
+; OUT:          ZF: 1 if same sign, else 0
+; MODIFIES:     st0-7, rax, rbx
+; CALLS:        
+; DETAILS:      considers -0.0 positive
+samesign:
+  ; a b
+  fldz ; 0 a b
+  fcomi st1 ; 0 ? a
+  jb .neg1
+  jmp .pos1
+  
+.neg1:
+  mov rax, 0
+  jmp .done1
+.pos1:
+  mov rax, 1
+  jmp .done1
+.done1:
+
+  fstp st1 ; 0 n3.c
+  fcomi st1 ; 0 ? b
+  jb .neg2
+  jmp .pos2
+
+.neg2:
+  mov rbx, 0
+  jmp .done2
+.pos2:
+  mov rbx, 1
+  jmp .done2
+.done2:
+  
+  cmp rax, rbx ; set ZF accordingly
+  ret ; according to jeff duntemann's appendix, RET does not affect flags
 
 ;------------------------------------------------------------------------------
 ; PROCEDURE:    echo
@@ -328,31 +371,79 @@ cross:
 
 _start:
   finit ; reset fpuregs
-  normal v1 v2 origin ; n1
+
+  vload p ; p
+  call norm ; |p|
+  call finv ; 1/|p|
+  fstp tword [rsp-10]
+  vload p
+  fld tword [rsp-10]
+  call vmul
+  vstore p
+
+  normal v1, v2, origin ; n1
   vstore n1
-  normal v1 v3 origin ; n2
+  normal v1, v3, origin ; n2
   vstore n2
-  normal v2 v3 origin ; n3
+  normal v2, v3, origin ; n3
   vstore n3
 
 ; TODO optimize the memory transfers in this section
 ; TODO redo all with SIMD and compare
 ; TODO do in pure C and compare
 ; TODO take advantage of fdecstp and fincstp (rotating stack)
-  center v1 v2 v3 ; c
+  center v1, v2, v3 ; c
   vstore c ; copy c
 
+; compare *.n1 signs
   vload c ; copy c back
   vload n1
   call vdot ; n3.c
 
+
   vload p
   vload n1
   call vdot ; n3.p n3.c
-  
-  ; LEH
-  
+
+
+  call samesign
+  vload n2
+  jnz .fail ; if not same sign, fail
+
+  finit ;reset
+; compare *.n2 signs
+  vload c
+  vload n2
+  call vdot
+
+  vload p
+  vload n2
+  call vdot
+
+  call samesign
+  jnz .fail
+
+  finit ;reset
+; compare *.n3 signs
+  vload c
+  vload n3
+  call vdot
+
+  vload p
+  vload n3
+  call vdot
+
+  call samesign
+  jnz .fail
+
+.success:
+  echo successmsg, successlen
   jmp .exit
+  
+.fail:
+  echo failmsg, faillen
+  jmp .exit
+
 .comp:
   fcomi st1
   jb .less

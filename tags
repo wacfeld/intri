@@ -7,18 +7,12 @@
 _start	bubblesort/main.asm	/^_start:$/;"	l
 _start	intri/floatcomp.asm	/^_start:$/;"	l
 _start	intri/main.asm	/^_start:$/;"	l
-a	intri/main.asm	/^a dt 4.0$/;"	d
 arr	bubblesort/main.asm	/^arr:  db 7, 5, 6, 7, 3, 2, 9, 5$/;"	d
 arrlen	bubblesort/main.asm	/^arrlen: equ $ - arr$/;"	d
-b	intri/main.asm	/^b dt 2.0$/;"	d
-c	intri/main.asm	/^c dt 1.0$/;"	d
 c	intri/main.asm	/^c rest 3$/;"	l
 cross	intri/main.asm	/^cross:$/;"	l
-d	intri/main.asm	/^d dt 6.0$/;"	d
-e	intri/main.asm	/^e dt 3.0$/;"	d
-f	intri/main.asm	/^f dt -1.0$/;"	d
-fail	intri/main.asm	/^fail db "fails test", 10$/;"	d
-faillen	intri/main.asm	/^faillen equ $ - msg1$/;"	d
+faillen	intri/main.asm	/^faillen equ $ - failmsg$/;"	d
+failmsg	intri/main.asm	/^failmsg db "fails test", 10$/;"	d
 finv	intri/main.asm	/^finv:$/;"	l
 global	bubblesort/main.asm	/^global _start$/;"	l
 global	intri/floatcomp.asm	/^global _start$/;"	l
@@ -42,9 +36,9 @@ n2	intri/main.asm	/^n2 rest 3$/;"	l
 n3	intri/main.asm	/^n3 rest 3$/;"	l
 norm	intri/main.asm	/^norm:$/;"	l
 noswap	bubblesort/main.asm	/^noswap: $/;"	l
-num	intri/main.asm	/^num dt -6.0$/;"	d
 origin	intri/main.asm	/^origin dt 0.0, 0.0, 0.0$/;"	d
-p	intri/main.asm	/^p dt 1.0, 1.0, 1.0$/;"	d
+p	intri/main.asm	/^p dt -0.92, 0.16, -0.37$/;"	d
+samesign	intri/main.asm	/^samesign:$/;"	l
 section	bubblesort/main.asm	/^section .data$/;"	l
 section	bubblesort/main.asm	/^section .text$/;"	l
 section	intri/floatcomp.asm	/^section .data$/;"	l
@@ -53,16 +47,17 @@ section	intri/main.asm	/^section .bss$/;"	l
 section	intri/main.asm	/^section .data$/;"	l
 section	intri/main.asm	/^section .text$/;"	l
 space	bubblesort/main.asm	/^space:  db 32$/;"	d
+successlen	intri/main.asm	/^successlen equ $ - successmsg$/;"	d
+successmsg	intri/main.asm	/^successmsg db "passes test", 10$/;"	d
+temp111	intri/main.asm	/^temp111 rest 300$/;"	l
+temp222	intri/main.asm	/^temp222 rest 300$/;"	l
 top	bubblesort/main.asm	/^top: $/;"	l
-v1	intri/main.asm	/^v1 dt 1.0, 0.0, 0.0$/;"	d
-v2	intri/main.asm	/^v2 dt 0.0, 1.0, 0.0$/;"	d
-v3	intri/main.asm	/^v3 dt 0.0, 0.0, 1.0$/;"	d
+v1	intri/main.asm	/^v1 dt -0.93, 0.22, -0.29$/;"	d
+v2	intri/main.asm	/^v2 dt -0.76, -0.41, -0.51$/;"	d
+v3	intri/main.asm	/^v3 dt -0.67, 0.1, -0.74$/;"	d
 vadd	intri/main.asm	/^vadd:$/;"	l
 vdot	intri/main.asm	/^vdot:$/;"	l
 vmul	intri/main.asm	/^vmul:$/;"	l
 vsub	intri/main.asm	/^vsub:$/;"	l
 x	intri/floatcomp.asm	/^x dt 3.14$/;"	d
-x	intri/main.asm	/^x dt 5.0$/;"	d
 y	intri/floatcomp.asm	/^y dt 3.14$/;"	d
-y	intri/main.asm	/^y dt 3.0$/;"	d
-z	intri/main.asm	/^z dt 2.0$/;"	d
