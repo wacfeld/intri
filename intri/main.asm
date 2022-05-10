@@ -36,8 +36,14 @@ len2 equ $ - msg2
 msg3 db "great", 10
 len3 equ $ - msg3
 
+fail db "fails test", 10
+faillen equ $ - msg1
+
 section .bss
 c rest 3
+n1 rest 3
+n2 rest 3
+n3 rest 3
 
 ; ; 3 vectors defining a triangle
 ; p1 rest 3
@@ -68,13 +74,13 @@ norm:
   ret       ; leave
 
 ;------------------------------------------------------------------------------
-; PROCEDURE:    dotp
+; PROCEDURE:    vdot
 ; IN:           st0-2: v, st3-5: w
 ; OUT:          st0: v . w
 ; MODIFIES:     st0-7
 ; CALLS:        none
 ; DETAILS:      dot product
-dotp:
+vdot:
   ; x y z a b c
   fmulp st3 ; y z x*a b c
   fmulp st3 ; z x*a y*b c
@@ -210,11 +216,17 @@ cross:
 
 ;------------------------------------------------------------------------------
 ; PROCEDURE:    vstore
-; IN:           
-; OUT:          
+; IN:           address
+; OUT:          vector in address
 ; MODIFIES:     
 ; CALLS:        
-; DETAILS:      
+; DETAILS:      stores in address, pops from fpu stack
+%macro vstore 1
+  fstp [%1]
+  fstp [%1+10]
+  fstp [%1+20]
+%endmacro
+
 
 ;------------------------------------------------------------------------------
 ; PROCEDURE:    vpush
@@ -295,6 +307,21 @@ cross:
   call finv ; 1/3 sum ; TODO optimize by computing 1/3 beforehand
   call vmul ; 1/3*sum
 %endmacro
+
+;------------------------------------------------------------------------------
+; PROCEDURE:    echo
+; IN:           msg, len
+; OUT:          none
+; MODIFIES:     rax-rdx
+; CALLS:        
+; DETAILS:      prints msg
+%macro echo 2
+  mov rax, 4
+  mov rbx, 1
+  mov rcx, %1
+  mov rdx, %2
+  int 80h
+%endmacro
   
 ; TODO make everything macros
 ; TODO optimize
@@ -302,15 +329,30 @@ cross:
 _start:
   finit ; reset fpuregs
   normal v1 v2 origin ; n1
-  vpush ; n1
+  vstore n1
   normal v1 v3 origin ; n2
-  vpush ; n2 n1
+  vstore n2
   normal v2 v3 origin ; n3
-  vpush ; n3 n2 n1
+  vstore n3
 
+; TODO optimize the memory transfers in this section
+; TODO redo all with SIMD and compare
+; TODO do in pure C and compare
+; TODO take advantage of fdecstp and fincstp (rotating stack)
   center v1 v2 v3 ; c
+  vstore c ; copy c
+
+  vload c ; copy c back
+  vload n1
+  call vdot ; n3.c
+
+  vload p
+  vload n1
+  call vdot ; n3.p n3.c
   
+  ; LEH
   
+  jmp .exit
 .comp:
   fcomi st1
   jb .less
