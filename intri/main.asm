@@ -1,14 +1,29 @@
+;------------------------------------------------------------------------------
+; NAME:         intri
+; TYPE:         main
+; DESCRIPTION:  determines whether a point is a triangle on a sphere
+; BUILD:        nasm -f elf64 -g -F dwarf main.asm -l main.lst
+;               ld -o main main.o
+;------------------------------------------------------------------------------
 section .data
 
 num dt -6.0
 
-x dt 4.0
-y dt 2.0
-z dt 1.0
+x dt 5.0
+y dt 3.0
+z dt 2.0
 
-a dt -2.0
-b dt 4.0
+a dt 4.0
+b dt 2.0
 c dt 1.0
+
+origin dt 0.0, 0.0, 0.0
+
+v1 dt 1.0, 0.0, 0.0
+v2 dt 0.0, 1.0, 0.0
+v3 dt 0.0, 0.0, 1.0
+
+p dt 1.0, 1.0, 1.0
 
 msg1 db "less", 10
 len1 equ $ - msg1
@@ -17,6 +32,13 @@ len2 equ $ - msg2
 msg3 db "great", 10
 len3 equ $ - msg3
 
+; section .bss
+
+; ; 3 vectors defining a triangle
+; p1 rest 3
+; p2 rest 3
+; p3 rest 3
+
 section .text
 global _start
 
@@ -24,7 +46,7 @@ global _start
 ; PROCEDURE:    norm
 ; IN:           st0, st1, st2: x, y, z
 ; OUT:          st0: |(x,y,z)|
-; MODIFIES:     st0-3
+; MODIFIES:     st0-7
 ; CALLS:        none
 ; DETAILS:      sqrt(x*x + y*y + z*z)
 norm:
@@ -44,7 +66,7 @@ norm:
 ; PROCEDURE:    dotp
 ; IN:           st0-2: v, st3-5: w
 ; OUT:          st0: v . w
-; MODIFIES:     st0-5
+; MODIFIES:     st0-7
 ; CALLS:        none
 ; DETAILS:      dot product
 dotp:
@@ -58,11 +80,70 @@ dotp:
   ret
 
 ;------------------------------------------------------------------------------
+; PROCEDURE:    vsub
+; IN:           st0-2: v, st3-5: w
+; OUT:          st0-2: v-w
+; MODIFIES:     st0-7
+; CALLS:        none
+; DETAILS:      
+vsub:
+  ; x y z a b c
+  fsubrp st3 ; y z x-a b c
+  fsubrp st3 ; z x-a y-b c
+  fsubrp st3 ; x-a y-b z-c
+
+  ret
+
+;------------------------------------------------------------------------------
+; PROCEDURE:    vadd
+; IN:           st0-2: v, st3-5: w
+; OUT:          st0-2: v+w
+; MODIFIES:     st0-7
+; CALLS:        none
+; DETAILS:      
+vadd:
+  ; x y z a b c
+  faddp st3
+  faddp st3
+  faddp st3
+
+  ret
+
+;------------------------------------------------------------------------------
+; PROCEDURE:    vmul
+; IN:           st0: c, st1-3: v
+; OUT:          st0-2: cv
+; MODIFIES:     st0-7
+; CALLS:        none
+; DETAILS:      
+vmul:
+  ; c x y z
+  fmul to st1
+  fmul to st2
+
+  fmulp st3
+
+  ret
+
+;------------------------------------------------------------------------------
+; PROCEDURE:    finv
+; IN:           st0: c
+; OUT:          st0: 1/c
+; MODIFIES:     st0-7
+; CALLS:        none
+; DETAILS:      
+finv:
+  fld1 ; 1 c
+  fdiv st1
+  
+  ret
+
+;------------------------------------------------------------------------------
 ; PROCEDURE:    cross
 ; IN:           st0-2: v, st3-5: w
 ; OUT:          st0-2: v x w
-; MODIFIES:     
-; CALLS:        
+; MODIFIES:     st0-7
+; CALLS:        none
 ; DETAILS:      cross product
 cross:
   ; x y z a b c
@@ -108,24 +189,87 @@ cross:
 
   ret
 
+;------------------------------------------------------------------------------
+; PROCEDURE:    vload
+; IN:           rax: address of vector
+; OUT:          st0-2: components of vector
+; MODIFIES:     st0-7
+; CALLS:        none
+; DETAILS:      
+vload:
+  fld tword [rax + 20]
+  fld tword [rax + 10]
+  fld tword [rax]
+
+  ret
+
+;------------------------------------------------------------------------------
+; PROCEDURE:    vpush
+; IN:           st0-2: vector
+; OUT:          vector on stack
+; MODIFIES:     st0-7, stack
+; CALLS:        none
+; DETAILS:      pushes st0-2 onto stack and pops st0-2
+%macro vpush 0
+  sub rsp, 30 ; allocate 3 doubles on stack
+  fstp tword [rsp]
+  fstp tword [rsp+10]
+  fstp tword [rsp+20]
+%endmacro
+
+;------------------------------------------------------------------------------
+; PROCEDURE:    vpop
+; IN:           vector on stack
+; OUT:          st0-2: vector
+; MODIFIES:     st0-7, stack
+; CALLS:        none
+; DETAILS:      pops vector off stack, pushes into st0-2
+%macro vpop 0
+  fld tword [rsp+20]
+  fld tword [rsp+10]
+  fld tword [rsp]
+
+  add rsp, 30 ; free 3 twords on stack
+%endmacro
+
+;------------------------------------------------------------------------------
+; PROCEDURE:    normal
+; IN:           rax-rcx: addresses of 3 vectors
+; OUT:          st0-2: normal vector to plane defined by 3 vectors
+; MODIFIES:     st0-7
+; CALLS:        
+; DETAILS:      
+normal:
+  call vload ; v1 . .
+  mov rax, rbx
+  call vload ; v2 . . v1 . .
+
+  call vsub  ; v2-v1 . .
+
+  mov rax, rcx ; v3 . . v2-v1 . .
+  
+
 _start:
   finit ; reset fpuregs
-  fld tword [c]
-  fld tword [b]
-  fld tword [a]
-  fld tword [z]
-  fld tword [y]
-  fld tword [x] ; x y z a b c
-  call cross     ; dotp
+  
+  mov rax, x
+  call vload
+  vpush
 
-  fstp st0
-  fld tword [num]
-  ; fldz          ; 0 dotp
+  mov rax, a
+  call vload
+  vpop
+
+  call vsub
+
+  fldz
+  
   
   fcomi st1     ; 0 ? dotp
   jb .less
   je .eq
   ja .great
+  jmp .exit
   
 .less:
   mov eax, 4
