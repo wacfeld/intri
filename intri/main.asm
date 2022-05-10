@@ -1,12 +1,14 @@
 section .data
-sqrt2 dt 1.414
-x dt 4.1
+
+num dt -6.0
+
+x dt 4.0
 y dt 2.0
-z dt 0.0
+z dt 1.0
 
 a dt -2.0
 b dt 4.0
-c dt 0.0
+c dt 1.0
 
 msg1 db "less", 10
 len1 equ $ - msg1
@@ -81,19 +83,44 @@ cross:
   fmul to st1 ; z z*a b c x u3 y
 
   ; calculate x*c then discard x
+  fld st3 ; c z z*a b c x u3 y
+  fmulp st5 ; z z*a b c x*c u3 y
+
+  ; calculate u2 = z*a-x*c
+  fld st1 ; z*a z z*a b c x*c u3 y
+  fsubrp st5 ; z z*a b c z*a-x*c u3 y
   
+  ; calculate z*b and discard z, b
+  fmul st2 ; z*b z*a b c u2 u3 y
+
+  ; calculate y*c and discard y, c
+  fld  st6 ; y z*b z*a b c u2 u3 y
+  fmulp st4 ; z*b z*a b y*c u2 u3 y
+
+  ; calcelate y*c-z*b
+  fsubp st3 ; z*a b y*c-z*b u2 u3 y
+
+  ; _ _ u1 u2 u3 _
+  ; pop twice
+  fstp st0
+  fstp st0
+  ; u1 u2 u3
+
+  ret
 
 _start:
   finit ; reset fpuregs
-  fld tword [x]
-  fld tword [y]
-  fld tword [z]
-  fld tword [a]
+  fld tword [c]
   fld tword [b]
-  fld tword [c] ; c b a z y x
-  call dotp     ; dotp
+  fld tword [a]
+  fld tword [z]
+  fld tword [y]
+  fld tword [x] ; x y z a b c
+  call cross     ; dotp
 
-  fldz          ; 0 dotp
+  fstp st0
+  fld tword [num]
+  ; fldz          ; 0 dotp
   
   fcomi st1     ; 0 ? dotp
   jb .less
