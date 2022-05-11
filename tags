@@ -54,6 +54,7 @@ successlen	intri/main.asm	/^successlen equ $ - successmsg$/;"	d
 successmsg	intri/main.asm	/^successmsg db "passes test", 10$/;"	d
 temp111	intri/main.asm	/^temp111 rest 300$/;"	l
 temp222	intri/main.asm	/^temp222 rest 300$/;"	l
+timestart	intri/main.asm	/^timestart r8$/;"	l
 top	bubblesort/main.asm	/^top: $/;"	l
 v1	intri/main.asm	/^v1 dt -0.93, 0.22, -0.29$/;"	d
 v2	intri/main.asm	/^v2 dt -0.76, -0.41, -0.51$/;"	d

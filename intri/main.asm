@@ -1,3 +1,4 @@
+; vim:nowrap
 ;------------------------------------------------------------------------------
 ; NAME:         intri
 ; TYPE:         main
@@ -431,20 +432,35 @@ samesign:
 ; TODO make everything macros
 ; TODO optimize
 
+%macro timestart 1
+  rdtsc
+  unpack
+  mov %1, rax
+%endmacro
+
+%macro timeend 1
+  rdtsc
+  unpack
+  sub rax, %1
+  bin_str
+%endmacro
+
 global _start
 _start:
-  rdtsc
-  unpack
-  mov r8, rax
+  ; rdtsc
+  ; unpack
+  ; mov r8, rax
   
 
-  rdtsc
-  unpack
-  sub rax, r9
-  bin_str
-  jmp .exit
+  ; rdtsc
+  ; unpack
+  ; sub rax, r8
+  ; bin_str
+  ; jmp .exit
 
   finit ; reset fpuregs
+
+timestart r8
 
   vload p ; p
   call norm ; |p|
@@ -511,45 +527,46 @@ _start:
   jnz .fail
 
 .success:
-  echo successmsg, successlen
-  jmp .exit
+  ; echo successmsg, successlen
+  jmp .wrap
   
 .fail:
-  echo failmsg, faillen
-  jmp .exit
+  ; echo failmsg, faillen
+  jmp .wrap
 
-.comp:
-  fcomi st1
-  jb .less
-  je .eq
-  ja .great
-  jmp .exit
+; .comp:
+;   fcomi st1
+;   jb .less
+;   je .eq
+;   ja .great
+;   jmp .exit
   
-.less:
-  mov eax, 4
-  mov ebx, 1
-  mov ecx, msg1
-  mov edx, len1
-  int 80h
-  jmp .exit
+; .less:
+;   mov eax, 4
+;   mov ebx, 1
+;   mov ecx, msg1
+;   mov edx, len1
+;   int 80h
+;   jmp .exit
 
-.eq:
-  mov eax, 4
-  mov ebx, 1
-  mov ecx, msg2
-  mov edx, len2
-  int 80h
-  jmp .exit
+; .eq:
+;   mov eax, 4
+;   mov ebx, 1
+;   mov ecx, msg2
+;   mov edx, len2
+;   int 80h
+;   jmp .exit
 
-.great:
-  mov eax, 4
-  mov ebx, 1
-  mov ecx, msg3
-  mov edx, len3
-  int 80h
-  jmp .exit
+; .great:
+;   mov eax, 4
+;   mov ebx, 1
+;   mov ecx, msg3
+;   mov edx, len3
+;   int 80h
+;   jmp .exit
 
-
+.wrap:
+  timeend r8
 .exit:
   mov rax, 1
   mov rbx, 0

@@ -1,859 +1,871 @@
-     1                                  ;------------------------------------------------------------------------------
-     2                                  ; NAME:         intri
-     3                                  ; TYPE:         main
-     4                                  ; DESCRIPTION:  determines whether a point is a triangle on a sphere
-     5                                  ; BUILD:        nasm -f elf64 -g -F dwarf main.asm -l main.lst
-     6                                  ;               ld -o main main.o
-     7                                  ;------------------------------------------------------------------------------
-     8                                  section .data
-     9                                  
-    10                                  ; num dt -6.0
-    11                                  
-    12                                  ; x dt 5.0
-    13                                  ; y dt 3.0
-    14                                  ; z dt 2.0
-    15                                  
-    16                                  ; a dt 4.0
-    17                                  ; b dt 2.0
-    18                                  ; c dt 1.0
-    19                                  
-    20                                  ; d dt 6.0
-    21                                  ; e dt 3.0
-    22                                  ; f dt -1.0
-    23                                  
-    24 00000000 000000000000000000-     origin dt 0.0, 0.0, 0.0
-    24 00000009 000000000000000000-
-    24 00000012 000000000000000000-
-    24 0000001B 000000             
-    25                                  ; G=(-0.93,0.22,-0.29)
-    26 0000001E 7B14AE47E17A14EEFE-     v1 dt -0.93, 0.22, -0.29
-    26 00000027 BFAE47E17A14AE47E1-
-    26 00000030 FC3FE17A14AE47E17A-
-    26 00000039 94FDBF             
-    27 0000003C 5C8FC2F5285C8FC2FE-     v2 dt -0.76, -0.41, -0.51
-    27 00000045 BF85EB51B81E85EBD1-
-    27 0000004E FDBF5C8FC2F5285C8F-
-    27 00000057 82FEBF             
-    28 0000005A 1F85EB51B81E85ABFE-     v3 dt -0.67, 0.1, -0.74
-    28 00000063 BFCDCCCCCCCCCCCCCC-
-    28 0000006C FB3FA4703D0AD7A370-
-    28 00000075 BDFEBF             
-    29                                  
-    30 00000078 1F85EB51B81E85EBFE-     p dt -0.92, 0.16, -0.37
-    30 00000081 BF0AD7A3703D0AD7A3-
-    30 0000008A FC3FA4703D0AD7A370-
-    30 00000093 BDFDBF             
-    31                                  
-    32 00000096 6C6573730A              msg1 db "less", 10
-    33                                  len1 equ $ - msg1
-    34 0000009B 65710A                  msg2 db "eq", 10
-    35                                  len2 equ $ - msg2
-    36 0000009E 67726561740A            msg3 db "great", 10
-    37                                  len3 equ $ - msg3
-    38                                  
-    39 000000A4 6661696C7320746573-     failmsg db "fails test", 10
-    39 000000AD 740A               
-    40                                  faillen equ $ - failmsg
-    41                                  
-    42 000000AF 706173736573207465-     successmsg db "passes test", 10
-    42 000000B8 73740A             
-    43                                  successlen equ $ - successmsg
-    44                                  
-    45 000000BB 31                      onechar db "1"
-    46 000000BC 30                      zerchar db "0"
-    47 000000BD 0A                      nlchar db 10
-    48                                  
-    49                                  section .bss
-    50 00000000 <res 0000001E>          c rest 3
-    51 0000001E <res 00000BB8>          temp111 rest 300
-    52 00000BD6 <res 0000001E>          n1 rest 3
-    53 00000BF4 <res 0000001E>          n2 rest 3
-    54 00000C12 <res 0000001E>          n3 rest 3
-    55 00000C30 <res 00000BB8>          temp222 rest 300
-    56                                  
-    57                                  ; ; 3 vectors defining a triangle
-    58                                  ; p1 rest 3
-    59                                  ; p2 rest 3
-    60                                  ; p3 rest 3
-    61                                  
-    62                                  section .text
-    63                                  
-    64                                  ;------------------------------------------------------------------------------
-    65                                  ; PROCEDURE:    unpack
-    66                                  ; IN:           edx:eax: qword
-    67                                  ; OUT:          rax:qword
-    68                                  ; MODIFIES:     rax, rdx
-    69                                  ; CALLS:        
-    70                                  ; DETAILS:      
-    71                                  %macro unpack 0
-    72                                    shl rdx, 32 ; edx -> left half of rdx
-    73                                    ; and rax, 0FFFF_FFFFH ; zero left half of rax
-    74                                    ; zero left half of rax
-    75                                    shl rax, 32
-    76                                    shr rax, 32
-    77                                    add rax, rdx ; whole number in rdx now
-    78                                  %endmacro
-    79                                  
-    80                                  ;------------------------------------------------------------------------------
-    81                                  ; PROCEDURE:    bin_str
-    82                                  ; IN:           rax: qword binary number
-    83                                  ; OUT:          none
-    84                                  ; MODIFIES:     registers
-    85                                  ; CALLS:        system call
-    86                                  ; DETAILS:      checks each bit, then prints corresponding ascii 0 or 1, followed by newline at very end
-    87                                  %macro bin_str 0
-    88                                          mov r8, rax ; we need rax, so store elsewhere
-    89                                  
-    90                                          mov r9,63  ; run 63+1 = 64 times
-    91                                  shift:  shl r8,1   ; shift rightmost bit into carry flag
-    92                                          jc .one     ; if bit is 1, jump
-    93                                  
-    94                                  ; print 0
-    95                                  .zer:   mov rax, 4
-    96                                          mov rbx, 1
-    97                                          mov rcx, zerchar
-    98                                          mov rdx, 1
-    99                                          int 80h
-   100                                          jmp .cloop              ; jump to loop check
-   101                                  
-   102                                  ; print 1
-   103                                  .one    mov rax, 4
-   104                                          mov rbx, 1
-   105                                          mov rcx, onechar
-   106                                          mov rdx, 1
-   107                                          int 80h
-   108                                          jmp .cloop              ; jump to loop check
-   109                                  
-   110                                  ; loop check
-   111                                  .cloop: dec r9                 ; dec bit counter
-   112                                          cmp r9,0               ; compare bit counter with 0
-   113                                          jge shift               ; if (signed) greater, equal 0, loop
-   114                                  
-   115                                  ; print newline
-   116                                          mov rax, 4
-   117                                          mov rdx, 1
-   118                                          mov rcx, nlchar
-   119                                          mov rdx, 1
-   120                                          int 80h
-   121                                  %endmacro
-   122                                  
-   123                                  ;------------------------------------------------------------------------------
-   124                                  ; PROCEDURE:    norm
-   125                                  ; IN:           st0, st1, st2: x, y, z
-   126                                  ; OUT:          st0: |(x,y,z)|
-   127                                  ; MODIFIES:     st0-7
-   128                                  ; CALLS:        none
-   129                                  ; DETAILS:      sqrt(x*x + y*y + z*z)
-   130                                  norm:
-   131 00000000 DDD3                      fst   st3 ; x y z x
-   132 00000002 DECB                      fmulp st3 ; y z x*x
-   133 00000004 DDD3                      fst   st3 ; y z x*x y
-   134 00000006 DECB                      fmulp st3 ; z x*x y*y
-   135 00000008 DDD3                      fst   st3 ; z x*x y*y z
-   136 0000000A DECB                      fmulp st3 ; x*x y*y z*z
-   137 0000000C DEC1                      faddp st1 ; x*x+y*y z*z
-   138 0000000E DEC1                      faddp st1 ; x*x+y*y+z*z
-   139 00000010 D9FA                      fsqrt     ; sqrt(...)
-   140                                  
-   141 00000012 C3                        ret       ; leave
-   142                                  
-   143                                  ;------------------------------------------------------------------------------
-   144                                  ; PROCEDURE:    vdot
-   145                                  ; IN:           st0-2: v, st3-5: w
-   146                                  ; OUT:          st0: v . w
-   147                                  ; MODIFIES:     st0-7
-   148                                  ; CALLS:        none
-   149                                  ; DETAILS:      dot product
-   150                                  vdot:
-   151                                    ; x y z a b c
-   152 00000013 DECB                      fmulp st3 ; y z x*a b c
-   153 00000015 DECB                      fmulp st3 ; z x*a y*b c
-   154 00000017 DECB                      fmulp st3 ; x*a y*b z*c
-   155 00000019 DEC1                      faddp st1 ; x*a+y*b z*c
-   156 0000001B DEC1                      faddp st1 ; x*a+y*b+z*c
-   157                                  
-   158 0000001D C3                        ret
-   159                                  
-   160                                  ;------------------------------------------------------------------------------
-   161                                  ; PROCEDURE:    vsub
-   162                                  ; IN:           st0-2: v, st3-5: w
-   163                                  ; OUT:          st0-2: v-w
-   164                                  ; MODIFIES:     st0-7
-   165                                  ; CALLS:        none
-   166                                  ; DETAILS:      
-   167                                  vsub:
-   168                                    ; x y z a b c
-   169 0000001E DEE3                      fsubrp st3 ; y z x-a b c
-   170 00000020 DEE3                      fsubrp st3 ; z x-a y-b c
-   171 00000022 DEE3                      fsubrp st3 ; x-a y-b z-c
-   172                                  
-   173 00000024 C3                        ret
-   174                                  
-   175                                  ;------------------------------------------------------------------------------
-   176                                  ; PROCEDURE:    vadd
-   177                                  ; IN:           st0-2: v, st3-5: w
-   178                                  ; OUT:          st0-2: v+w
-   179                                  ; MODIFIES:     st0-7
-   180                                  ; CALLS:        none
-   181                                  ; DETAILS:      
-   182                                  vadd:
-   183                                    ; x y z a b c
-   184 00000025 DEC3                      faddp st3
-   185 00000027 DEC3                      faddp st3
-   186 00000029 DEC3                      faddp st3
-   187                                  
-   188 0000002B C3                        ret
-   189                                  
-   190                                  ;------------------------------------------------------------------------------
-   191                                  ; PROCEDURE:    vmul
-   192                                  ; IN:           st0: c, st1-3: v
-   193                                  ; OUT:          st0-2: cv
-   194                                  ; MODIFIES:     st0-7
-   195                                  ; CALLS:        none
-   196                                  ; DETAILS:      
-   197                                  vmul:
-   198                                    ; c x y z
-   199 0000002C DCC9                      fmul to st1
-   200 0000002E DCCA                      fmul to st2
-   201                                  
-   202 00000030 DECB                      fmulp st3
-   203                                  
-   204 00000032 C3                        ret
-   205                                  
-   206                                  ;------------------------------------------------------------------------------
-   207                                  ; PROCEDURE:    finv
-   208                                  ; IN:           st0: c
-   209                                  ; OUT:          st0: 1/c
-   210                                  ; MODIFIES:     st0-7
-   211                                  ; CALLS:        none
-   212                                  ; DETAILS:      
-   213                                  finv:
-   214 00000033 D9E8                      fld1 ; 1 c
-   215 00000035 DEF1                      fdivrp st1
-   216                                    
-   217 00000037 C3                        ret
-   218                                  
-   219                                  ;------------------------------------------------------------------------------
-   220                                  ; PROCEDURE:    cross
-   221                                  ; IN:           st0-2: v, st3-5: w
-   222                                  ; OUT:          st0-2: v x w
-   223                                  ; MODIFIES:     st0-7
-   224                                  ; CALLS:        none
-   225                                  ; DETAILS:      cross product
-   226                                  cross:
-   227                                    ; x y z a b c
-   228                                  
-   229                                    ; calculate x*b
-   230 00000038 DDD6                      fst st6 ; x y z a b c x
-   231 0000003A D8CC                      fmul  st4 ; x*b y z a b c x
-   232 0000003C DDDF                      fstp  st7 ; y z a b c x x*b
-   233                                  
-   234                                    ; calculate y*a
-   235 0000003E DDD7                      fst   st7 ; y z a b c x x*b y
-   236 00000040 D8CA                      fmul  st2 ; y*a z a b c x x*b y
-   237                                  
-   238                                    ; calculate u3 = x*b-y*a
-   239 00000042 DEEE                      fsubp st6 ; z a b c x x*b-y*a y
-   240                                  
-   241                                    ; calculate z*a then discard a
-   242 00000044 DCC9                      fmul to st1 ; z z*a b c x u3 y
-   243                                  
-   244                                    ; calculate x*c then discard x
-   245 00000046 D9C3                      fld st3 ; c z z*a b c x u3 y
-   246 00000048 DECD                      fmulp st5 ; z z*a b c x*c u3 y
-   247                                  
-   248                                    ; calculate u2 = z*a-x*c
-   249 0000004A D9C1                      fld st1 ; z*a z z*a b c x*c u3 y
-   250 0000004C DEE5                      fsubrp st5 ; z z*a b c z*a-x*c u3 y
-   251                                    
-   252                                    ; calculate z*b and discard z, b
-   253 0000004E D8CA                      fmul st2 ; z*b z*a b c u2 u3 y
-   254                                  
-   255                                    ; calculate y*c and discard y, c
-   256 00000050 D9C6                      fld  st6 ; y z*b z*a b c u2 u3 y
-   257 00000052 DECC                      fmulp st4 ; z*b z*a b y*c u2 u3 y
-   258                                  
-   259                                    ; calcelate y*c-z*b
-   260 00000054 DEEB                      fsubp st3 ; z*a b y*c-z*b u2 u3 y
-   261                                  
-   262                                    ; _ _ u1 u2 u3 _
-   263                                    ; pop twice
-   264 00000056 DDD8                      fstp st0
-   265 00000058 DDD8                      fstp st0
-   266                                    ; u1 u2 u3
-   267                                  
-   268 0000005A C3                        ret
-   269                                  
-   270                                  ;------------------------------------------------------------------------------
-   271                                  ; PROCEDURE:    vload
-   272                                  ; IN:           address of vector
-   273                                  ; OUT:          st0-2: components of vector
-   274                                  ; MODIFIES:     st0-7
-   275                                  ; CALLS:        none
-   276                                  ; DETAILS:      
-   277                                  %macro vload 1
-   278                                    fld tword [%1 + 20]
-   279                                    fld tword [%1 + 10]
-   280                                    fld tword [%1]
-   281                                  
-   282                                  %endmacro
-   283                                  
-   284                                  ;------------------------------------------------------------------------------
-   285                                  ; PROCEDURE:    vstore
-   286                                  ; IN:           address
-   287                                  ; OUT:          vector in address
-   288                                  ; MODIFIES:     
-   289                                  ; CALLS:        
-   290                                  ; DETAILS:      stores in address, pops from fpu stack
-   291                                  %macro vstore 1
-   292                                    fstp tword [%1]
-   293                                    fstp tword [%1+10]
-   294                                    fstp tword [%1+20]
-   295                                  %endmacro
-   296                                  
+     1                                  ; vim:nowrap
+     2                                  ;------------------------------------------------------------------------------
+     3                                  ; NAME:         intri
+     4                                  ; TYPE:         main
+     5                                  ; DESCRIPTION:  determines whether a point is a triangle on a sphere
+     6                                  ; BUILD:        nasm -f elf64 -g -F dwarf main.asm -l main.lst
+     7                                  ;               ld -o main main.o
+     8                                  ;------------------------------------------------------------------------------
+     9                                  section .data
+    10                                  
+    11                                  ; num dt -6.0
+    12                                  
+    13                                  ; x dt 5.0
+    14                                  ; y dt 3.0
+    15                                  ; z dt 2.0
+    16                                  
+    17                                  ; a dt 4.0
+    18                                  ; b dt 2.0
+    19                                  ; c dt 1.0
+    20                                  
+    21                                  ; d dt 6.0
+    22                                  ; e dt 3.0
+    23                                  ; f dt -1.0
+    24                                  
+    25 00000000 000000000000000000-     origin dt 0.0, 0.0, 0.0
+    25 00000009 000000000000000000-
+    25 00000012 000000000000000000-
+    25 0000001B 000000             
+    26                                  ; G=(-0.93,0.22,-0.29)
+    27 0000001E 7B14AE47E17A14EEFE-     v1 dt -0.93, 0.22, -0.29
+    27 00000027 BFAE47E17A14AE47E1-
+    27 00000030 FC3FE17A14AE47E17A-
+    27 00000039 94FDBF             
+    28 0000003C 5C8FC2F5285C8FC2FE-     v2 dt -0.76, -0.41, -0.51
+    28 00000045 BF85EB51B81E85EBD1-
+    28 0000004E FDBF5C8FC2F5285C8F-
+    28 00000057 82FEBF             
+    29 0000005A 1F85EB51B81E85ABFE-     v3 dt -0.67, 0.1, -0.74
+    29 00000063 BFCDCCCCCCCCCCCCCC-
+    29 0000006C FB3FA4703D0AD7A370-
+    29 00000075 BDFEBF             
+    30                                  
+    31 00000078 1F85EB51B81E85EBFE-     p dt -0.92, 0.16, -0.37
+    31 00000081 BF0AD7A3703D0AD7A3-
+    31 0000008A FC3FA4703D0AD7A370-
+    31 00000093 BDFDBF             
+    32                                  
+    33 00000096 6C6573730A              msg1 db "less", 10
+    34                                  len1 equ $ - msg1
+    35 0000009B 65710A                  msg2 db "eq", 10
+    36                                  len2 equ $ - msg2
+    37 0000009E 67726561740A            msg3 db "great", 10
+    38                                  len3 equ $ - msg3
+    39                                  
+    40 000000A4 6661696C7320746573-     failmsg db "fails test", 10
+    40 000000AD 740A               
+    41                                  faillen equ $ - failmsg
+    42                                  
+    43 000000AF 706173736573207465-     successmsg db "passes test", 10
+    43 000000B8 73740A             
+    44                                  successlen equ $ - successmsg
+    45                                  
+    46 000000BB 31                      onechar db "1"
+    47 000000BC 30                      zerchar db "0"
+    48 000000BD 0A                      nlchar db 10
+    49                                  
+    50                                  section .bss
+    51 00000000 <res 0000001E>          c rest 3
+    52 0000001E <res 00000BB8>          temp111 rest 300
+    53 00000BD6 <res 0000001E>          n1 rest 3
+    54 00000BF4 <res 0000001E>          n2 rest 3
+    55 00000C12 <res 0000001E>          n3 rest 3
+    56 00000C30 <res 00000BB8>          temp222 rest 300
+    57                                  
+    58                                  ; ; 3 vectors defining a triangle
+    59                                  ; p1 rest 3
+    60                                  ; p2 rest 3
+    61                                  ; p3 rest 3
+    62                                  
+    63                                  section .text
+    64                                  
+    65                                  ;------------------------------------------------------------------------------
+    66                                  ; PROCEDURE:    unpack
+    67                                  ; IN:           edx:eax: qword
+    68                                  ; OUT:          rax:qword
+    69                                  ; MODIFIES:     rax, rdx
+    70                                  ; CALLS:        
+    71                                  ; DETAILS:      
+    72                                  %macro unpack 0
+    73                                    shl rdx, 32 ; edx -> left half of rdx
+    74                                    ; and rax, 0FFFF_FFFFH ; zero left half of rax
+    75                                    ; zero left half of rax
+    76                                    shl rax, 32
+    77                                    shr rax, 32
+    78                                    add rax, rdx ; whole number in rdx now
+    79                                  %endmacro
+    80                                  
+    81                                  ;------------------------------------------------------------------------------
+    82                                  ; PROCEDURE:    bin_str
+    83                                  ; IN:           rax: qword binary number
+    84                                  ; OUT:          none
+    85                                  ; MODIFIES:     registers
+    86                                  ; CALLS:        system call
+    87                                  ; DETAILS:      checks each bit, then prints corresponding ascii 0 or 1, followed by newline at very end
+    88                                  %macro bin_str 0
+    89                                          mov r8, rax ; we need rax, so store elsewhere
+    90                                  
+    91                                          mov r9,63  ; run 63+1 = 64 times
+    92                                  shift:  shl r8,1   ; shift rightmost bit into carry flag
+    93                                          jc .one     ; if bit is 1, jump
+    94                                  
+    95                                  ; print 0
+    96                                  .zer:   mov rax, 4
+    97                                          mov rbx, 1
+    98                                          mov rcx, zerchar
+    99                                          mov rdx, 1
+   100                                          int 80h
+   101                                          jmp .cloop              ; jump to loop check
+   102                                  
+   103                                  ; print 1
+   104                                  .one    mov rax, 4
+   105                                          mov rbx, 1
+   106                                          mov rcx, onechar
+   107                                          mov rdx, 1
+   108                                          int 80h
+   109                                          jmp .cloop              ; jump to loop check
+   110                                  
+   111                                  ; loop check
+   112                                  .cloop: dec r9                 ; dec bit counter
+   113                                          cmp r9,0               ; compare bit counter with 0
+   114                                          jge shift               ; if (signed) greater, equal 0, loop
+   115                                  
+   116                                  ; print newline
+   117                                          mov rax, 4
+   118                                          mov rdx, 1
+   119                                          mov rcx, nlchar
+   120                                          mov rdx, 1
+   121                                          int 80h
+   122                                  %endmacro
+   123                                  
+   124                                  ;------------------------------------------------------------------------------
+   125                                  ; PROCEDURE:    norm
+   126                                  ; IN:           st0, st1, st2: x, y, z
+   127                                  ; OUT:          st0: |(x,y,z)|
+   128                                  ; MODIFIES:     st0-7
+   129                                  ; CALLS:        none
+   130                                  ; DETAILS:      sqrt(x*x + y*y + z*z)
+   131                                  norm:
+   132 00000000 DDD3                      fst   st3 ; x y z x
+   133 00000002 DECB                      fmulp st3 ; y z x*x
+   134 00000004 DDD3                      fst   st3 ; y z x*x y
+   135 00000006 DECB                      fmulp st3 ; z x*x y*y
+   136 00000008 DDD3                      fst   st3 ; z x*x y*y z
+   137 0000000A DECB                      fmulp st3 ; x*x y*y z*z
+   138 0000000C DEC1                      faddp st1 ; x*x+y*y z*z
+   139 0000000E DEC1                      faddp st1 ; x*x+y*y+z*z
+   140 00000010 D9FA                      fsqrt     ; sqrt(...)
+   141                                  
+   142 00000012 C3                        ret       ; leave
+   143                                  
+   144                                  ;------------------------------------------------------------------------------
+   145                                  ; PROCEDURE:    vdot
+   146                                  ; IN:           st0-2: v, st3-5: w
+   147                                  ; OUT:          st0: v . w
+   148                                  ; MODIFIES:     st0-7
+   149                                  ; CALLS:        none
+   150                                  ; DETAILS:      dot product
+   151                                  vdot:
+   152                                    ; x y z a b c
+   153 00000013 DECB                      fmulp st3 ; y z x*a b c
+   154 00000015 DECB                      fmulp st3 ; z x*a y*b c
+   155 00000017 DECB                      fmulp st3 ; x*a y*b z*c
+   156 00000019 DEC1                      faddp st1 ; x*a+y*b z*c
+   157 0000001B DEC1                      faddp st1 ; x*a+y*b+z*c
+   158                                  
+   159 0000001D C3                        ret
+   160                                  
+   161                                  ;------------------------------------------------------------------------------
+   162                                  ; PROCEDURE:    vsub
+   163                                  ; IN:           st0-2: v, st3-5: w
+   164                                  ; OUT:          st0-2: v-w
+   165                                  ; MODIFIES:     st0-7
+   166                                  ; CALLS:        none
+   167                                  ; DETAILS:      
+   168                                  vsub:
+   169                                    ; x y z a b c
+   170 0000001E DEE3                      fsubrp st3 ; y z x-a b c
+   171 00000020 DEE3                      fsubrp st3 ; z x-a y-b c
+   172 00000022 DEE3                      fsubrp st3 ; x-a y-b z-c
+   173                                  
+   174 00000024 C3                        ret
+   175                                  
+   176                                  ;------------------------------------------------------------------------------
+   177                                  ; PROCEDURE:    vadd
+   178                                  ; IN:           st0-2: v, st3-5: w
+   179                                  ; OUT:          st0-2: v+w
+   180                                  ; MODIFIES:     st0-7
+   181                                  ; CALLS:        none
+   182                                  ; DETAILS:      
+   183                                  vadd:
+   184                                    ; x y z a b c
+   185 00000025 DEC3                      faddp st3
+   186 00000027 DEC3                      faddp st3
+   187 00000029 DEC3                      faddp st3
+   188                                  
+   189 0000002B C3                        ret
+   190                                  
+   191                                  ;------------------------------------------------------------------------------
+   192                                  ; PROCEDURE:    vmul
+   193                                  ; IN:           st0: c, st1-3: v
+   194                                  ; OUT:          st0-2: cv
+   195                                  ; MODIFIES:     st0-7
+   196                                  ; CALLS:        none
+   197                                  ; DETAILS:      
+   198                                  vmul:
+   199                                    ; c x y z
+   200 0000002C DCC9                      fmul to st1
+   201 0000002E DCCA                      fmul to st2
+   202                                  
+   203 00000030 DECB                      fmulp st3
+   204                                  
+   205 00000032 C3                        ret
+   206                                  
+   207                                  ;------------------------------------------------------------------------------
+   208                                  ; PROCEDURE:    finv
+   209                                  ; IN:           st0: c
+   210                                  ; OUT:          st0: 1/c
+   211                                  ; MODIFIES:     st0-7
+   212                                  ; CALLS:        none
+   213                                  ; DETAILS:      
+   214                                  finv:
+   215 00000033 D9E8                      fld1 ; 1 c
+   216 00000035 DEF1                      fdivrp st1
+   217                                    
+   218 00000037 C3                        ret
+   219                                  
+   220                                  ;------------------------------------------------------------------------------
+   221                                  ; PROCEDURE:    cross
+   222                                  ; IN:           st0-2: v, st3-5: w
+   223                                  ; OUT:          st0-2: v x w
+   224                                  ; MODIFIES:     st0-7
+   225                                  ; CALLS:        none
+   226                                  ; DETAILS:      cross product
+   227                                  cross:
+   228                                    ; x y z a b c
+   229                                  
+   230                                    ; calculate x*b
+   231 00000038 DDD6                      fst st6 ; x y z a b c x
+   232 0000003A D8CC                      fmul  st4 ; x*b y z a b c x
+   233 0000003C DDDF                      fstp  st7 ; y z a b c x x*b
+   234                                  
+   235                                    ; calculate y*a
+   236 0000003E DDD7                      fst   st7 ; y z a b c x x*b y
+   237 00000040 D8CA                      fmul  st2 ; y*a z a b c x x*b y
+   238                                  
+   239                                    ; calculate u3 = x*b-y*a
+   240 00000042 DEEE                      fsubp st6 ; z a b c x x*b-y*a y
+   241                                  
+   242                                    ; calculate z*a then discard a
+   243 00000044 DCC9                      fmul to st1 ; z z*a b c x u3 y
+   244                                  
+   245                                    ; calculate x*c then discard x
+   246 00000046 D9C3                      fld st3 ; c z z*a b c x u3 y
+   247 00000048 DECD                      fmulp st5 ; z z*a b c x*c u3 y
+   248                                  
+   249                                    ; calculate u2 = z*a-x*c
+   250 0000004A D9C1                      fld st1 ; z*a z z*a b c x*c u3 y
+   251 0000004C DEE5                      fsubrp st5 ; z z*a b c z*a-x*c u3 y
+   252                                    
+   253                                    ; calculate z*b and discard z, b
+   254 0000004E D8CA                      fmul st2 ; z*b z*a b c u2 u3 y
+   255                                  
+   256                                    ; calculate y*c and discard y, c
+   257 00000050 D9C6                      fld  st6 ; y z*b z*a b c u2 u3 y
+   258 00000052 DECC                      fmulp st4 ; z*b z*a b y*c u2 u3 y
+   259                                  
+   260                                    ; calcelate y*c-z*b
+   261 00000054 DEEB                      fsubp st3 ; z*a b y*c-z*b u2 u3 y
+   262                                  
+   263                                    ; _ _ u1 u2 u3 _
+   264                                    ; pop twice
+   265 00000056 DDD8                      fstp st0
+   266 00000058 DDD8                      fstp st0
+   267                                    ; u1 u2 u3
+   268                                  
+   269 0000005A C3                        ret
+   270                                  
+   271                                  ;------------------------------------------------------------------------------
+   272                                  ; PROCEDURE:    vload
+   273                                  ; IN:           address of vector
+   274                                  ; OUT:          st0-2: components of vector
+   275                                  ; MODIFIES:     st0-7
+   276                                  ; CALLS:        none
+   277                                  ; DETAILS:      
+   278                                  %macro vload 1
+   279                                    fld tword [%1 + 20]
+   280                                    fld tword [%1 + 10]
+   281                                    fld tword [%1]
+   282                                  
+   283                                  %endmacro
+   284                                  
+   285                                  ;------------------------------------------------------------------------------
+   286                                  ; PROCEDURE:    vstore
+   287                                  ; IN:           address
+   288                                  ; OUT:          vector in address
+   289                                  ; MODIFIES:     
+   290                                  ; CALLS:        
+   291                                  ; DETAILS:      stores in address, pops from fpu stack
+   292                                  %macro vstore 1
+   293                                    fstp tword [%1]
+   294                                    fstp tword [%1+10]
+   295                                    fstp tword [%1+20]
+   296                                  %endmacro
    297                                  
-   298                                  ;------------------------------------------------------------------------------
-   299                                  ; PROCEDURE:    vpush
-   300                                  ; IN:           st0-2: vector
-   301                                  ; OUT:          vector on stack
-   302                                  ; MODIFIES:     st0-7, stack
-   303                                  ; CALLS:        none
-   304                                  ; DETAILS:      pushes st0-2 onto stack and pops st0-2
-   305                                  %macro vpush 0
-   306                                    sub rsp, 30 ; allocate 3 doubles on stack
-   307                                    fstp tword [rsp]
-   308                                    fstp tword [rsp+10]
-   309                                    fstp tword [rsp+20]
-   310                                  %endmacro
-   311                                  
-   312                                  ;------------------------------------------------------------------------------
-   313                                  ; PROCEDURE:    vpop
-   314                                  ; IN:           vector on stack
-   315                                  ; OUT:          st0-2: vector
-   316                                  ; MODIFIES:     st0-7, stack
-   317                                  ; CALLS:        none
-   318                                  ; DETAILS:      pops vector off stack, pushes into st0-2
-   319                                  %macro vpop 0
-   320                                    fld tword [rsp+20]
-   321                                    fld tword [rsp+10]
-   322                                    fld tword [rsp]
-   323                                  
-   324                                    add rsp, 30 ; free 3 twords on stack
-   325                                  %endmacro
-   326                                  
-   327                                  ;------------------------------------------------------------------------------
-   328                                  ; PROCEDURE:    normal
-   329                                  ; IN:           3 addresses of vectors
-   330                                  ; OUT:          st0-2: normal vector to plane defined by 3 vectors
-   331                                  ; MODIFIES:     st0-7
-   332                                  ; CALLS:        
-   333                                  ; DETAILS:      
-   334                                  %macro normal 3
-   335                                    vload %1   ; v1 . .
-   336                                    vload %2   ; v2 . . v1 . .
-   337                                  
-   338                                    call  vsub  ; v2-v1 . .
-   339                                  
-   340                                    vpush       ; 
-   341                                  
-   342                                    vload %1   ; v1 . .
-   343                                    vload %3   ; v3 . .
-   344                                  
-   345                                    call  vsub  ; v3-v1 . .
-   346                                  
-   347                                    vpop        ; v2-v1 . . v3-v1 . .
-   348                                  
-   349                                    call  cross ; n
-   350                                    
-   351                                  %endmacro
-   352                                    
-   353                                  ;------------------------------------------------------------------------------
-   354                                  ; PROCEDURE:    center
-   355                                  ; IN:           addresses of 3 vectors
-   356                                  ; OUT:          st0-2: average of 3 vectors
-   357                                  ; MODIFIES:     st0-7
-   358                                  ; CALLS:        
-   359                                  ; DETAILS:      
-   360                                  %macro center 3
-   361                                    vload %1 ; v1
-   362                                    vload %2 ; v2 v1
-   363                                    call vadd ; v1+v2
-   364                                    vload %3 ; v3 v1+v2
-   365                                    call vadd ; v1+v2+v3
-   366                                    
-   367                                    ; sum = v1+v2+v3
-   368                                  
-   369                                    ; obtain the number 3...
-   370                                    fld1 ; 1 sum
-   371                                    fadd st0 ; 2 sum
-   372                                    fld1 ; 1 2 sum
-   373                                    faddp st1 ; 3 sum
-   374                                    call finv ; 1/3 sum ; TODO optimize by computing 1/3 beforehand
-   375                                    call vmul ; 1/3*sum
-   376                                  %endmacro
-   377                                  
-   378                                  ;------------------------------------------------------------------------------
-   379                                  ; PROCEDURE:    samesign
-   380                                  ; IN:           st0-1: two floats
-   381                                  ; OUT:          ZF: 1 if same sign, else 0
-   382                                  ; MODIFIES:     st0-7, rax, rbx
-   383                                  ; CALLS:        
-   384                                  ; DETAILS:      considers -0.0 positive
-   385                                  samesign:
-   386                                    ; a b
-   387 0000005B D9EE                      fldz ; 0 a b
-   388 0000005D DBF1                      fcomi st1 ; 0 ? a
-   389 0000005F 7202                      jb .neg1
-   390 00000061 EB07                      jmp .pos1
-   391                                    
-   392                                  .neg1:
-   393 00000063 B800000000                mov rax, 0
-   394 00000068 EB07                      jmp .done1
-   395                                  .pos1:
-   396 0000006A B801000000                mov rax, 1
-   397 0000006F EB00                      jmp .done1
-   398                                  .done1:
-   399                                  
-   400 00000071 DDD9                      fstp st1 ; 0 n3.c
-   401 00000073 DBF1                      fcomi st1 ; 0 ? b
-   402 00000075 7202                      jb .neg2
-   403 00000077 EB07                      jmp .pos2
-   404                                  
-   405                                  .neg2:
-   406 00000079 BB00000000                mov rbx, 0
-   407 0000007E EB07                      jmp .done2
-   408                                  .pos2:
-   409 00000080 BB01000000                mov rbx, 1
-   410 00000085 EB00                      jmp .done2
-   411                                  .done2:
-   412                                    
-   413 00000087 4839D8                    cmp rax, rbx ; set ZF accordingly
-   414 0000008A C3                        ret ; according to jeff duntemann's appendix, RET does not affect flags
-   415                                  
-   416                                  ;------------------------------------------------------------------------------
-   417                                  ; PROCEDURE:    echo
-   418                                  ; IN:           msg, len
-   419                                  ; OUT:          none
-   420                                  ; MODIFIES:     rax-rdx
-   421                                  ; CALLS:        
-   422                                  ; DETAILS:      prints msg
-   423                                  %macro echo 2
-   424                                    mov rax, 4
-   425                                    mov rbx, 1
-   426                                    mov rcx, %1
-   427                                    mov rdx, %2
-   428                                    int 80h
-   429                                  %endmacro
-   430                                    
-   431                                  ; TODO make everything macros
-   432                                  ; TODO optimize
-   433                                  
-   434                                  global _start
-   435                                  _start:
-   436 0000008B 0F31                      rdtsc
+   298                                  
+   299                                  ;------------------------------------------------------------------------------
+   300                                  ; PROCEDURE:    vpush
+   301                                  ; IN:           st0-2: vector
+   302                                  ; OUT:          vector on stack
+   303                                  ; MODIFIES:     st0-7, stack
+   304                                  ; CALLS:        none
+   305                                  ; DETAILS:      pushes st0-2 onto stack and pops st0-2
+   306                                  %macro vpush 0
+   307                                    sub rsp, 30 ; allocate 3 doubles on stack
+   308                                    fstp tword [rsp]
+   309                                    fstp tword [rsp+10]
+   310                                    fstp tword [rsp+20]
+   311                                  %endmacro
+   312                                  
+   313                                  ;------------------------------------------------------------------------------
+   314                                  ; PROCEDURE:    vpop
+   315                                  ; IN:           vector on stack
+   316                                  ; OUT:          st0-2: vector
+   317                                  ; MODIFIES:     st0-7, stack
+   318                                  ; CALLS:        none
+   319                                  ; DETAILS:      pops vector off stack, pushes into st0-2
+   320                                  %macro vpop 0
+   321                                    fld tword [rsp+20]
+   322                                    fld tword [rsp+10]
+   323                                    fld tword [rsp]
+   324                                  
+   325                                    add rsp, 30 ; free 3 twords on stack
+   326                                  %endmacro
+   327                                  
+   328                                  ;------------------------------------------------------------------------------
+   329                                  ; PROCEDURE:    normal
+   330                                  ; IN:           3 addresses of vectors
+   331                                  ; OUT:          st0-2: normal vector to plane defined by 3 vectors
+   332                                  ; MODIFIES:     st0-7
+   333                                  ; CALLS:        
+   334                                  ; DETAILS:      
+   335                                  %macro normal 3
+   336                                    vload %1   ; v1 . .
+   337                                    vload %2   ; v2 . . v1 . .
+   338                                  
+   339                                    call  vsub  ; v2-v1 . .
+   340                                  
+   341                                    vpush       ; 
+   342                                  
+   343                                    vload %1   ; v1 . .
+   344                                    vload %3   ; v3 . .
+   345                                  
+   346                                    call  vsub  ; v3-v1 . .
+   347                                  
+   348                                    vpop        ; v2-v1 . . v3-v1 . .
+   349                                  
+   350                                    call  cross ; n
+   351                                    
+   352                                  %endmacro
+   353                                    
+   354                                  ;------------------------------------------------------------------------------
+   355                                  ; PROCEDURE:    center
+   356                                  ; IN:           addresses of 3 vectors
+   357                                  ; OUT:          st0-2: average of 3 vectors
+   358                                  ; MODIFIES:     st0-7
+   359                                  ; CALLS:        
+   360                                  ; DETAILS:      
+   361                                  %macro center 3
+   362                                    vload %1 ; v1
+   363                                    vload %2 ; v2 v1
+   364                                    call vadd ; v1+v2
+   365                                    vload %3 ; v3 v1+v2
+   366                                    call vadd ; v1+v2+v3
+   367                                    
+   368                                    ; sum = v1+v2+v3
+   369                                  
+   370                                    ; obtain the number 3...
+   371                                    fld1 ; 1 sum
+   372                                    fadd st0 ; 2 sum
+   373                                    fld1 ; 1 2 sum
+   374                                    faddp st1 ; 3 sum
+   375                                    call finv ; 1/3 sum ; TODO optimize by computing 1/3 beforehand
+   376                                    call vmul ; 1/3*sum
+   377                                  %endmacro
+   378                                  
+   379                                  ;------------------------------------------------------------------------------
+   380                                  ; PROCEDURE:    samesign
+   381                                  ; IN:           st0-1: two floats
+   382                                  ; OUT:          ZF: 1 if same sign, else 0
+   383                                  ; MODIFIES:     st0-7, rax, rbx
+   384                                  ; CALLS:        
+   385                                  ; DETAILS:      considers -0.0 positive
+   386                                  samesign:
+   387                                    ; a b
+   388 0000005B D9EE                      fldz ; 0 a b
+   389 0000005D DBF1                      fcomi st1 ; 0 ? a
+   390 0000005F 7202                      jb .neg1
+   391 00000061 EB07                      jmp .pos1
+   392                                    
+   393                                  .neg1:
+   394 00000063 B800000000                mov rax, 0
+   395 00000068 EB07                      jmp .done1
+   396                                  .pos1:
+   397 0000006A B801000000                mov rax, 1
+   398 0000006F EB00                      jmp .done1
+   399                                  .done1:
+   400                                  
+   401 00000071 DDD9                      fstp st1 ; 0 n3.c
+   402 00000073 DBF1                      fcomi st1 ; 0 ? b
+   403 00000075 7202                      jb .neg2
+   404 00000077 EB07                      jmp .pos2
+   405                                  
+   406                                  .neg2:
+   407 00000079 BB00000000                mov rbx, 0
+   408 0000007E EB07                      jmp .done2
+   409                                  .pos2:
+   410 00000080 BB01000000                mov rbx, 1
+   411 00000085 EB00                      jmp .done2
+   412                                  .done2:
+   413                                    
+   414 00000087 4839D8                    cmp rax, rbx ; set ZF accordingly
+   415 0000008A C3                        ret ; according to jeff duntemann's appendix, RET does not affect flags
+   416                                  
+   417                                  ;------------------------------------------------------------------------------
+   418                                  ; PROCEDURE:    echo
+   419                                  ; IN:           msg, len
+   420                                  ; OUT:          none
+   421                                  ; MODIFIES:     rax-rdx
+   422                                  ; CALLS:        
+   423                                  ; DETAILS:      prints msg
+   424                                  %macro echo 2
+   425                                    mov rax, 4
+   426                                    mov rbx, 1
+   427                                    mov rcx, %1
+   428                                    mov rdx, %2
+   429                                    int 80h
+   430                                  %endmacro
+   431                                    
+   432                                  ; TODO make everything macros
+   433                                  ; TODO optimize
+   434                                  
+   435                                  %macro timestart 1
+   436                                    rdtsc
    437                                    unpack
-   437 0000008D 48C1E220            <1>  shl rdx, 32
-   437                              <1> 
-   437                              <1> 
-   437 00000091 48C1E020            <1>  shl rax, 32
-   437 00000095 48C1E820            <1>  shr rax, 32
-   437 00000099 4801D0              <1>  add rax, rdx
-   438 0000009C 4989C0                    mov r8, rax
-   439                                    
+   438                                    mov %1, rax
+   439                                  %endmacro
    440                                  
-   441 0000009F 0F31                      rdtsc
-   442                                    unpack
-   442 000000A1 48C1E220            <1>  shl rdx, 32
-   442                              <1> 
-   442                              <1> 
-   442 000000A5 48C1E020            <1>  shl rax, 32
-   442 000000A9 48C1E820            <1>  shr rax, 32
-   442 000000AD 4801D0              <1>  add rax, rdx
-   443 000000B0 4C29C8                    sub rax, r9
-   444                                    bin_str
-   444 000000B3 4989C0              <1>  mov r8, rax
-   444                              <1> 
-   444 000000B6 41B93F000000        <1>  mov r9,63
-   444 000000BC 49D1E0              <1> shift: shl r8,1
-   444 000000BF 721D                <1>  jc .one
-   444                              <1> 
-   444                              <1> 
-   444 000000C1 B804000000          <1> .zer: mov rax, 4
-   444 000000C6 BB01000000          <1>  mov rbx, 1
-   444 000000CB 48B9-               <1>  mov rcx, zerchar
-   444 000000CD [BC00000000000000]  <1>
-   444 000000D5 BA01000000          <1>  mov rdx, 1
-   444 000000DA CD80                <1>  int 80h
-   444 000000DC EB1D                <1>  jmp .cloop
-   444                              <1> 
-   444                              <1> 
-   444 000000DE B804000000          <1> .one mov rax, 4
-   444 000000E3 BB01000000          <1>  mov rbx, 1
-   444 000000E8 48B9-               <1>  mov rcx, onechar
-   444 000000EA [BB00000000000000]  <1>
-   444 000000F2 BA01000000          <1>  mov rdx, 1
-   444 000000F7 CD80                <1>  int 80h
-   444 000000F9 EB00                <1>  jmp .cloop
-   444                              <1> 
-   444                              <1> 
-   444 000000FB 49FFC9              <1> .cloop: dec r9
-   444 000000FE 4983F900            <1>  cmp r9,0
-   444 00000102 7DB8                <1>  jge shift
-   444                              <1> 
-   444                              <1> 
-   444 00000104 B804000000          <1>  mov rax, 4
-   444 00000109 BA01000000          <1>  mov rdx, 1
-   444 0000010E 48B9-               <1>  mov rcx, nlchar
-   444 00000110 [BD00000000000000]  <1>
-   444 00000118 BA01000000          <1>  mov rdx, 1
-   444 0000011D CD80                <1>  int 80h
-   445 0000011F E969040000                jmp .exit
-   446                                  
-   447 00000124 9BDBE3                    finit ; reset fpuregs
-   448                                  
-   449                                    vload p ; p
-   449 00000127 DB2C25[8C000000]    <1>  fld tword [%1 + 20]
-   449 0000012E DB2C25[82000000]    <1>  fld tword [%1 + 10]
-   449 00000135 DB2C25[78000000]    <1>  fld tword [%1]
-   449                              <1> 
-   450 0000013C E8BFFEFFFF                call norm ; |p|
-   451 00000141 E8EDFEFFFF                call finv ; 1/|p|
-   452 00000146 DB7C24F6                  fstp tword [rsp-10]
-   453                                    vload p
-   453 0000014A DB2C25[8C000000]    <1>  fld tword [%1 + 20]
-   453 00000151 DB2C25[82000000]    <1>  fld tword [%1 + 10]
-   453 00000158 DB2C25[78000000]    <1>  fld tword [%1]
-   453                              <1> 
-   454 0000015F DB6C24F6                  fld tword [rsp-10]
-   455 00000163 E8C4FEFFFF                call vmul
-   456                                    vstore p
-   456 00000168 DB3C25[78000000]    <1>  fstp tword [%1]
-   456 0000016F DB3C25[82000000]    <1>  fstp tword [%1+10]
-   456 00000176 DB3C25[8C000000]    <1>  fstp tword [%1+20]
-   457                                  
-   458                                    normal v1, v2, origin ; n1
-   458                              <1>  vload %1
-   458 0000017D DB2C25[32000000]    <2>  fld tword [%1 + 20]
-   458 00000184 DB2C25[28000000]    <2>  fld tword [%1 + 10]
-   458 0000018B DB2C25[1E000000]    <2>  fld tword [%1]
-   458                              <2> 
-   458                              <1>  vload %2
-   458 00000192 DB2C25[50000000]    <2>  fld tword [%1 + 20]
-   458 00000199 DB2C25[46000000]    <2>  fld tword [%1 + 10]
-   458 000001A0 DB2C25[3C000000]    <2>  fld tword [%1]
-   458                              <2> 
-   458                              <1> 
-   458 000001A7 E872FEFFFF          <1>  call vsub
-   458                              <1> 
-   458                              <1>  vpush
-   458 000001AC 4883EC1E            <2>  sub rsp, 30
-   458 000001B0 DB3C24              <2>  fstp tword [rsp]
-   458 000001B3 DB7C240A            <2>  fstp tword [rsp+10]
-   458 000001B7 DB7C2414            <2>  fstp tword [rsp+20]
-   458                              <1> 
-   458                              <1>  vload %1
-   458 000001BB DB2C25[32000000]    <2>  fld tword [%1 + 20]
-   458 000001C2 DB2C25[28000000]    <2>  fld tword [%1 + 10]
-   458 000001C9 DB2C25[1E000000]    <2>  fld tword [%1]
-   458                              <2> 
-   458                              <1>  vload %3
-   458 000001D0 DB2C25[14000000]    <2>  fld tword [%1 + 20]
-   458 000001D7 DB2C25[0A000000]    <2>  fld tword [%1 + 10]
-   458 000001DE DB2C25[00000000]    <2>  fld tword [%1]
-   458                              <2> 
-   458                              <1> 
-   458 000001E5 E834FEFFFF          <1>  call vsub
-   458                              <1> 
-   458                              <1>  vpop
-   458 000001EA DB6C2414            <2>  fld tword [rsp+20]
-   458 000001EE DB6C240A            <2>  fld tword [rsp+10]
-   458 000001F2 DB2C24              <2>  fld tword [rsp]
-   458                              <2> 
-   458 000001F5 4883C41E            <2>  add rsp, 30
-   458                              <1> 
-   458 000001F9 E83AFEFFFF          <1>  call cross
-   458                              <1> 
-   459                                    vstore n1
-   459 000001FE DB3C25[D60B0000]    <1>  fstp tword [%1]
-   459 00000205 DB3C25[E00B0000]    <1>  fstp tword [%1+10]
-   459 0000020C DB3C25[EA0B0000]    <1>  fstp tword [%1+20]
-   460                                    normal v1, v3, origin ; n2
-   460                              <1>  vload %1
-   460 00000213 DB2C25[32000000]    <2>  fld tword [%1 + 20]
-   460 0000021A DB2C25[28000000]    <2>  fld tword [%1 + 10]
-   460 00000221 DB2C25[1E000000]    <2>  fld tword [%1]
-   460                              <2> 
-   460                              <1>  vload %2
-   460 00000228 DB2C25[6E000000]    <2>  fld tword [%1 + 20]
-   460 0000022F DB2C25[64000000]    <2>  fld tword [%1 + 10]
-   460 00000236 DB2C25[5A000000]    <2>  fld tword [%1]
-   460                              <2> 
-   460                              <1> 
-   460 0000023D E8DCFDFFFF          <1>  call vsub
-   460                              <1> 
-   460                              <1>  vpush
-   460 00000242 4883EC1E            <2>  sub rsp, 30
-   460 00000246 DB3C24              <2>  fstp tword [rsp]
-   460 00000249 DB7C240A            <2>  fstp tword [rsp+10]
-   460 0000024D DB7C2414            <2>  fstp tword [rsp+20]
-   460                              <1> 
-   460                              <1>  vload %1
-   460 00000251 DB2C25[32000000]    <2>  fld tword [%1 + 20]
-   460 00000258 DB2C25[28000000]    <2>  fld tword [%1 + 10]
-   460 0000025F DB2C25[1E000000]    <2>  fld tword [%1]
-   460                              <2> 
-   460                              <1>  vload %3
-   460 00000266 DB2C25[14000000]    <2>  fld tword [%1 + 20]
-   460 0000026D DB2C25[0A000000]    <2>  fld tword [%1 + 10]
-   460 00000274 DB2C25[00000000]    <2>  fld tword [%1]
-   460                              <2> 
-   460                              <1> 
-   460 0000027B E89EFDFFFF          <1>  call vsub
-   460                              <1> 
-   460                              <1>  vpop
-   460 00000280 DB6C2414            <2>  fld tword [rsp+20]
-   460 00000284 DB6C240A            <2>  fld tword [rsp+10]
-   460 00000288 DB2C24              <2>  fld tword [rsp]
-   460                              <2> 
-   460 0000028B 4883C41E            <2>  add rsp, 30
-   460                              <1> 
-   460 0000028F E8A4FDFFFF          <1>  call cross
-   460                              <1> 
-   461                                    vstore n2
-   461 00000294 DB3C25[F40B0000]    <1>  fstp tword [%1]
-   461 0000029B DB3C25[FE0B0000]    <1>  fstp tword [%1+10]
-   461 000002A2 DB3C25[080C0000]    <1>  fstp tword [%1+20]
-   462                                    normal v2, v3, origin ; n3
-   462                              <1>  vload %1
-   462 000002A9 DB2C25[50000000]    <2>  fld tword [%1 + 20]
-   462 000002B0 DB2C25[46000000]    <2>  fld tword [%1 + 10]
-   462 000002B7 DB2C25[3C000000]    <2>  fld tword [%1]
-   462                              <2> 
-   462                              <1>  vload %2
-   462 000002BE DB2C25[6E000000]    <2>  fld tword [%1 + 20]
-   462 000002C5 DB2C25[64000000]    <2>  fld tword [%1 + 10]
-   462 000002CC DB2C25[5A000000]    <2>  fld tword [%1]
-   462                              <2> 
-   462                              <1> 
-   462 000002D3 E846FDFFFF          <1>  call vsub
-   462                              <1> 
-   462                              <1>  vpush
-   462 000002D8 4883EC1E            <2>  sub rsp, 30
-   462 000002DC DB3C24              <2>  fstp tword [rsp]
-   462 000002DF DB7C240A            <2>  fstp tword [rsp+10]
-   462 000002E3 DB7C2414            <2>  fstp tword [rsp+20]
-   462                              <1> 
-   462                              <1>  vload %1
-   462 000002E7 DB2C25[50000000]    <2>  fld tword [%1 + 20]
-   462 000002EE DB2C25[46000000]    <2>  fld tword [%1 + 10]
-   462 000002F5 DB2C25[3C000000]    <2>  fld tword [%1]
-   462                              <2> 
-   462                              <1>  vload %3
-   462 000002FC DB2C25[14000000]    <2>  fld tword [%1 + 20]
-   462 00000303 DB2C25[0A000000]    <2>  fld tword [%1 + 10]
-   462 0000030A DB2C25[00000000]    <2>  fld tword [%1]
-   462                              <2> 
-   462                              <1> 
-   462 00000311 E808FDFFFF          <1>  call vsub
-   462                              <1> 
-   462                              <1>  vpop
-   462 00000316 DB6C2414            <2>  fld tword [rsp+20]
-   462 0000031A DB6C240A            <2>  fld tword [rsp+10]
-   462 0000031E DB2C24              <2>  fld tword [rsp]
-   462                              <2> 
-   462 00000321 4883C41E            <2>  add rsp, 30
-   462                              <1> 
-   462 00000325 E80EFDFFFF          <1>  call cross
-   462                              <1> 
-   463                                    vstore n3
-   463 0000032A DB3C25[120C0000]    <1>  fstp tword [%1]
-   463 00000331 DB3C25[1C0C0000]    <1>  fstp tword [%1+10]
-   463 00000338 DB3C25[260C0000]    <1>  fstp tword [%1+20]
+   441                                  %macro timeend 1
+   442                                    rdtsc
+   443                                    unpack
+   444                                    sub rax, %1
+   445                                    bin_str
+   446                                  %endmacro
+   447                                  
+   448                                  global _start
+   449                                  _start:
+   450                                    ; rdtsc
+   451                                    ; unpack
+   452                                    ; mov r8, rax
+   453                                    
+   454                                  
+   455                                    ; rdtsc
+   456                                    ; unpack
+   457                                    ; sub rax, r8
+   458                                    ; bin_str
+   459                                    ; jmp .exit
+   460                                  
+   461 0000008B 9BDBE3                    finit ; reset fpuregs
+   462                                  
+   463                                  timestart r8
+   463 0000008E 0F31                <1>  rdtsc
+   463                              <1>  unpack
+   463 00000090 48C1E220            <2>  shl rdx, 32
+   463                              <2> 
+   463                              <2> 
+   463 00000094 48C1E020            <2>  shl rax, 32
+   463 00000098 48C1E820            <2>  shr rax, 32
+   463 0000009C 4801D0              <2>  add rax, rdx
+   463 0000009F 4989C0              <1>  mov %1, rax
    464                                  
-   465                                  ; TODO optimize the memory transfers in this section
-   466                                  ; TODO redo all with SIMD and compare
-   467                                  ; TODO do in pure C and compare
-   468                                  ; TODO take advantage of fdecstp and fincstp (rotating stack)
-   469                                    center v1, v2, v3 ; c
-   469                              <1>  vload %1
-   469 0000033F DB2C25[32000000]    <2>  fld tword [%1 + 20]
-   469 00000346 DB2C25[28000000]    <2>  fld tword [%1 + 10]
-   469 0000034D DB2C25[1E000000]    <2>  fld tword [%1]
-   469                              <2> 
-   469                              <1>  vload %2
-   469 00000354 DB2C25[50000000]    <2>  fld tword [%1 + 20]
-   469 0000035B DB2C25[46000000]    <2>  fld tword [%1 + 10]
-   469 00000362 DB2C25[3C000000]    <2>  fld tword [%1]
-   469                              <2> 
-   469 00000369 E8B7FCFFFF          <1>  call vadd
-   469                              <1>  vload %3
-   469 0000036E DB2C25[6E000000]    <2>  fld tword [%1 + 20]
-   469 00000375 DB2C25[64000000]    <2>  fld tword [%1 + 10]
-   469 0000037C DB2C25[5A000000]    <2>  fld tword [%1]
-   469                              <2> 
-   469 00000383 E89DFCFFFF          <1>  call vadd
+   465                                    vload p ; p
+   465 000000A2 DB2C25[8C000000]    <1>  fld tword [%1 + 20]
+   465 000000A9 DB2C25[82000000]    <1>  fld tword [%1 + 10]
+   465 000000B0 DB2C25[78000000]    <1>  fld tword [%1]
+   465                              <1> 
+   466 000000B7 E844FFFFFF                call norm ; |p|
+   467 000000BC E872FFFFFF                call finv ; 1/|p|
+   468 000000C1 DB7C24F6                  fstp tword [rsp-10]
+   469                                    vload p
+   469 000000C5 DB2C25[8C000000]    <1>  fld tword [%1 + 20]
+   469 000000CC DB2C25[82000000]    <1>  fld tword [%1 + 10]
+   469 000000D3 DB2C25[78000000]    <1>  fld tword [%1]
    469                              <1> 
-   469                              <1> 
-   469                              <1> 
-   469                              <1> 
-   469 00000388 D9E8                <1>  fld1
-   469 0000038A D8C0                <1>  fadd st0
-   469 0000038C D9E8                <1>  fld1
-   469 0000038E DEC1                <1>  faddp st1
-   469 00000390 E89EFCFFFF          <1>  call finv
-   469 00000395 E892FCFFFF          <1>  call vmul
-   470                                    vstore c ; copy c
-   470 0000039A DB3C25[00000000]    <1>  fstp tword [%1]
-   470 000003A1 DB3C25[0A000000]    <1>  fstp tword [%1+10]
-   470 000003A8 DB3C25[14000000]    <1>  fstp tword [%1+20]
-   471                                  
-   472                                  ; compare *.n1 signs
-   473                                    vload c ; copy c back
-   473 000003AF DB2C25[14000000]    <1>  fld tword [%1 + 20]
-   473 000003B6 DB2C25[0A000000]    <1>  fld tword [%1 + 10]
-   473 000003BD DB2C25[00000000]    <1>  fld tword [%1]
-   473                              <1> 
-   474                                    vload n1
-   474 000003C4 DB2C25[EA0B0000]    <1>  fld tword [%1 + 20]
-   474 000003CB DB2C25[E00B0000]    <1>  fld tword [%1 + 10]
-   474 000003D2 DB2C25[D60B0000]    <1>  fld tword [%1]
+   470 000000DA DB6C24F6                  fld tword [rsp-10]
+   471 000000DE E849FFFFFF                call vmul
+   472                                    vstore p
+   472 000000E3 DB3C25[78000000]    <1>  fstp tword [%1]
+   472 000000EA DB3C25[82000000]    <1>  fstp tword [%1+10]
+   472 000000F1 DB3C25[8C000000]    <1>  fstp tword [%1+20]
+   473                                  
+   474                                    normal v1, v2, origin ; n1
+   474                              <1>  vload %1
+   474 000000F8 DB2C25[32000000]    <2>  fld tword [%1 + 20]
+   474 000000FF DB2C25[28000000]    <2>  fld tword [%1 + 10]
+   474 00000106 DB2C25[1E000000]    <2>  fld tword [%1]
+   474                              <2> 
+   474                              <1>  vload %2
+   474 0000010D DB2C25[50000000]    <2>  fld tword [%1 + 20]
+   474 00000114 DB2C25[46000000]    <2>  fld tword [%1 + 10]
+   474 0000011B DB2C25[3C000000]    <2>  fld tword [%1]
+   474                              <2> 
    474                              <1> 
-   475 000003D9 E835FCFFFF                call vdot ; n3.c
-   476                                  
-   477                                  
-   478                                    vload p
-   478 000003DE DB2C25[8C000000]    <1>  fld tword [%1 + 20]
-   478 000003E5 DB2C25[82000000]    <1>  fld tword [%1 + 10]
-   478 000003EC DB2C25[78000000]    <1>  fld tword [%1]
+   474 00000122 E8F7FEFFFF          <1>  call vsub
+   474                              <1> 
+   474                              <1>  vpush
+   474 00000127 4883EC1E            <2>  sub rsp, 30
+   474 0000012B DB3C24              <2>  fstp tword [rsp]
+   474 0000012E DB7C240A            <2>  fstp tword [rsp+10]
+   474 00000132 DB7C2414            <2>  fstp tword [rsp+20]
+   474                              <1> 
+   474                              <1>  vload %1
+   474 00000136 DB2C25[32000000]    <2>  fld tword [%1 + 20]
+   474 0000013D DB2C25[28000000]    <2>  fld tword [%1 + 10]
+   474 00000144 DB2C25[1E000000]    <2>  fld tword [%1]
+   474                              <2> 
+   474                              <1>  vload %3
+   474 0000014B DB2C25[14000000]    <2>  fld tword [%1 + 20]
+   474 00000152 DB2C25[0A000000]    <2>  fld tword [%1 + 10]
+   474 00000159 DB2C25[00000000]    <2>  fld tword [%1]
+   474                              <2> 
+   474                              <1> 
+   474 00000160 E8B9FEFFFF          <1>  call vsub
+   474                              <1> 
+   474                              <1>  vpop
+   474 00000165 DB6C2414            <2>  fld tword [rsp+20]
+   474 00000169 DB6C240A            <2>  fld tword [rsp+10]
+   474 0000016D DB2C24              <2>  fld tword [rsp]
+   474                              <2> 
+   474 00000170 4883C41E            <2>  add rsp, 30
+   474                              <1> 
+   474 00000174 E8BFFEFFFF          <1>  call cross
+   474                              <1> 
+   475                                    vstore n1
+   475 00000179 DB3C25[D60B0000]    <1>  fstp tword [%1]
+   475 00000180 DB3C25[E00B0000]    <1>  fstp tword [%1+10]
+   475 00000187 DB3C25[EA0B0000]    <1>  fstp tword [%1+20]
+   476                                    normal v1, v3, origin ; n2
+   476                              <1>  vload %1
+   476 0000018E DB2C25[32000000]    <2>  fld tword [%1 + 20]
+   476 00000195 DB2C25[28000000]    <2>  fld tword [%1 + 10]
+   476 0000019C DB2C25[1E000000]    <2>  fld tword [%1]
+   476                              <2> 
+   476                              <1>  vload %2
+   476 000001A3 DB2C25[6E000000]    <2>  fld tword [%1 + 20]
+   476 000001AA DB2C25[64000000]    <2>  fld tword [%1 + 10]
+   476 000001B1 DB2C25[5A000000]    <2>  fld tword [%1]
+   476                              <2> 
+   476                              <1> 
+   476 000001B8 E861FEFFFF          <1>  call vsub
+   476                              <1> 
+   476                              <1>  vpush
+   476 000001BD 4883EC1E            <2>  sub rsp, 30
+   476 000001C1 DB3C24              <2>  fstp tword [rsp]
+   476 000001C4 DB7C240A            <2>  fstp tword [rsp+10]
+   476 000001C8 DB7C2414            <2>  fstp tword [rsp+20]
+   476                              <1> 
+   476                              <1>  vload %1
+   476 000001CC DB2C25[32000000]    <2>  fld tword [%1 + 20]
+   476 000001D3 DB2C25[28000000]    <2>  fld tword [%1 + 10]
+   476 000001DA DB2C25[1E000000]    <2>  fld tword [%1]
+   476                              <2> 
+   476                              <1>  vload %3
+   476 000001E1 DB2C25[14000000]    <2>  fld tword [%1 + 20]
+   476 000001E8 DB2C25[0A000000]    <2>  fld tword [%1 + 10]
+   476 000001EF DB2C25[00000000]    <2>  fld tword [%1]
+   476                              <2> 
+   476                              <1> 
+   476 000001F6 E823FEFFFF          <1>  call vsub
+   476                              <1> 
+   476                              <1>  vpop
+   476 000001FB DB6C2414            <2>  fld tword [rsp+20]
+   476 000001FF DB6C240A            <2>  fld tword [rsp+10]
+   476 00000203 DB2C24              <2>  fld tword [rsp]
+   476                              <2> 
+   476 00000206 4883C41E            <2>  add rsp, 30
+   476                              <1> 
+   476 0000020A E829FEFFFF          <1>  call cross
+   476                              <1> 
+   477                                    vstore n2
+   477 0000020F DB3C25[F40B0000]    <1>  fstp tword [%1]
+   477 00000216 DB3C25[FE0B0000]    <1>  fstp tword [%1+10]
+   477 0000021D DB3C25[080C0000]    <1>  fstp tword [%1+20]
+   478                                    normal v2, v3, origin ; n3
+   478                              <1>  vload %1
+   478 00000224 DB2C25[50000000]    <2>  fld tword [%1 + 20]
+   478 0000022B DB2C25[46000000]    <2>  fld tword [%1 + 10]
+   478 00000232 DB2C25[3C000000]    <2>  fld tword [%1]
+   478                              <2> 
+   478                              <1>  vload %2
+   478 00000239 DB2C25[6E000000]    <2>  fld tword [%1 + 20]
+   478 00000240 DB2C25[64000000]    <2>  fld tword [%1 + 10]
+   478 00000247 DB2C25[5A000000]    <2>  fld tword [%1]
+   478                              <2> 
    478                              <1> 
-   479                                    vload n1
-   479 000003F3 DB2C25[EA0B0000]    <1>  fld tword [%1 + 20]
-   479 000003FA DB2C25[E00B0000]    <1>  fld tword [%1 + 10]
-   479 00000401 DB2C25[D60B0000]    <1>  fld tword [%1]
-   479                              <1> 
-   480 00000408 E806FCFFFF                call vdot ; n3.p n3.c
-   481                                  
-   482                                  
-   483 0000040D E849FCFFFF                call samesign
-   484                                    vload n2
-   484 00000412 DB2C25[080C0000]    <1>  fld tword [%1 + 20]
-   484 00000419 DB2C25[FE0B0000]    <1>  fld tword [%1 + 10]
-   484 00000420 DB2C25[F40B0000]    <1>  fld tword [%1]
-   484                              <1> 
-   485 00000427 0F85F1000000              jnz .fail ; if not same sign, fail
-   486                                  
-   487 0000042D 9BDBE3                    finit ;reset
-   488                                  ; compare *.n2 signs
-   489                                    vload c
-   489 00000430 DB2C25[14000000]    <1>  fld tword [%1 + 20]
-   489 00000437 DB2C25[0A000000]    <1>  fld tword [%1 + 10]
-   489 0000043E DB2C25[00000000]    <1>  fld tword [%1]
+   478 0000024E E8CBFDFFFF          <1>  call vsub
+   478                              <1> 
+   478                              <1>  vpush
+   478 00000253 4883EC1E            <2>  sub rsp, 30
+   478 00000257 DB3C24              <2>  fstp tword [rsp]
+   478 0000025A DB7C240A            <2>  fstp tword [rsp+10]
+   478 0000025E DB7C2414            <2>  fstp tword [rsp+20]
+   478                              <1> 
+   478                              <1>  vload %1
+   478 00000262 DB2C25[50000000]    <2>  fld tword [%1 + 20]
+   478 00000269 DB2C25[46000000]    <2>  fld tword [%1 + 10]
+   478 00000270 DB2C25[3C000000]    <2>  fld tword [%1]
+   478                              <2> 
+   478                              <1>  vload %3
+   478 00000277 DB2C25[14000000]    <2>  fld tword [%1 + 20]
+   478 0000027E DB2C25[0A000000]    <2>  fld tword [%1 + 10]
+   478 00000285 DB2C25[00000000]    <2>  fld tword [%1]
+   478                              <2> 
+   478                              <1> 
+   478 0000028C E88DFDFFFF          <1>  call vsub
+   478                              <1> 
+   478                              <1>  vpop
+   478 00000291 DB6C2414            <2>  fld tword [rsp+20]
+   478 00000295 DB6C240A            <2>  fld tword [rsp+10]
+   478 00000299 DB2C24              <2>  fld tword [rsp]
+   478                              <2> 
+   478 0000029C 4883C41E            <2>  add rsp, 30
+   478                              <1> 
+   478 000002A0 E893FDFFFF          <1>  call cross
+   478                              <1> 
+   479                                    vstore n3
+   479 000002A5 DB3C25[120C0000]    <1>  fstp tword [%1]
+   479 000002AC DB3C25[1C0C0000]    <1>  fstp tword [%1+10]
+   479 000002B3 DB3C25[260C0000]    <1>  fstp tword [%1+20]
+   480                                  
+   481                                  ; TODO optimize the memory transfers in this section
+   482                                  ; TODO redo all with SIMD and compare
+   483                                  ; TODO do in pure C and compare
+   484                                  ; TODO take advantage of fdecstp and fincstp (rotating stack)
+   485                                    center v1, v2, v3 ; c
+   485                              <1>  vload %1
+   485 000002BA DB2C25[32000000]    <2>  fld tword [%1 + 20]
+   485 000002C1 DB2C25[28000000]    <2>  fld tword [%1 + 10]
+   485 000002C8 DB2C25[1E000000]    <2>  fld tword [%1]
+   485                              <2> 
+   485                              <1>  vload %2
+   485 000002CF DB2C25[50000000]    <2>  fld tword [%1 + 20]
+   485 000002D6 DB2C25[46000000]    <2>  fld tword [%1 + 10]
+   485 000002DD DB2C25[3C000000]    <2>  fld tword [%1]
+   485                              <2> 
+   485 000002E4 E83CFDFFFF          <1>  call vadd
+   485                              <1>  vload %3
+   485 000002E9 DB2C25[6E000000]    <2>  fld tword [%1 + 20]
+   485 000002F0 DB2C25[64000000]    <2>  fld tword [%1 + 10]
+   485 000002F7 DB2C25[5A000000]    <2>  fld tword [%1]
+   485                              <2> 
+   485 000002FE E822FDFFFF          <1>  call vadd
+   485                              <1> 
+   485                              <1> 
+   485                              <1> 
+   485                              <1> 
+   485 00000303 D9E8                <1>  fld1
+   485 00000305 D8C0                <1>  fadd st0
+   485 00000307 D9E8                <1>  fld1
+   485 00000309 DEC1                <1>  faddp st1
+   485 0000030B E823FDFFFF          <1>  call finv
+   485 00000310 E817FDFFFF          <1>  call vmul
+   486                                    vstore c ; copy c
+   486 00000315 DB3C25[00000000]    <1>  fstp tword [%1]
+   486 0000031C DB3C25[0A000000]    <1>  fstp tword [%1+10]
+   486 00000323 DB3C25[14000000]    <1>  fstp tword [%1+20]
+   487                                  
+   488                                  ; compare *.n1 signs
+   489                                    vload c ; copy c back
+   489 0000032A DB2C25[14000000]    <1>  fld tword [%1 + 20]
+   489 00000331 DB2C25[0A000000]    <1>  fld tword [%1 + 10]
+   489 00000338 DB2C25[00000000]    <1>  fld tword [%1]
    489                              <1> 
-   490                                    vload n2
-   490 00000445 DB2C25[080C0000]    <1>  fld tword [%1 + 20]
-   490 0000044C DB2C25[FE0B0000]    <1>  fld tword [%1 + 10]
-   490 00000453 DB2C25[F40B0000]    <1>  fld tword [%1]
+   490                                    vload n1
+   490 0000033F DB2C25[EA0B0000]    <1>  fld tword [%1 + 20]
+   490 00000346 DB2C25[E00B0000]    <1>  fld tword [%1 + 10]
+   490 0000034D DB2C25[D60B0000]    <1>  fld tword [%1]
    490                              <1> 
-   491 0000045A E8B4FBFFFF                call vdot
+   491 00000354 E8BAFCFFFF                call vdot ; n3.c
    492                                  
-   493                                    vload p
-   493 0000045F DB2C25[8C000000]    <1>  fld tword [%1 + 20]
-   493 00000466 DB2C25[82000000]    <1>  fld tword [%1 + 10]
-   493 0000046D DB2C25[78000000]    <1>  fld tword [%1]
-   493                              <1> 
-   494                                    vload n2
-   494 00000474 DB2C25[080C0000]    <1>  fld tword [%1 + 20]
-   494 0000047B DB2C25[FE0B0000]    <1>  fld tword [%1 + 10]
-   494 00000482 DB2C25[F40B0000]    <1>  fld tword [%1]
+   493                                  
+   494                                    vload p
+   494 00000359 DB2C25[8C000000]    <1>  fld tword [%1 + 20]
+   494 00000360 DB2C25[82000000]    <1>  fld tword [%1 + 10]
+   494 00000367 DB2C25[78000000]    <1>  fld tword [%1]
    494                              <1> 
-   495 00000489 E885FBFFFF                call vdot
-   496                                  
-   497 0000048E E8C8FBFFFF                call samesign
-   498 00000493 0F8585000000              jnz .fail
-   499                                  
-   500 00000499 9BDBE3                    finit ;reset
-   501                                  ; compare *.n3 signs
-   502                                    vload c
-   502 0000049C DB2C25[14000000]    <1>  fld tword [%1 + 20]
-   502 000004A3 DB2C25[0A000000]    <1>  fld tword [%1 + 10]
-   502 000004AA DB2C25[00000000]    <1>  fld tword [%1]
-   502                              <1> 
-   503                                    vload n3
-   503 000004B1 DB2C25[260C0000]    <1>  fld tword [%1 + 20]
-   503 000004B8 DB2C25[1C0C0000]    <1>  fld tword [%1 + 10]
-   503 000004BF DB2C25[120C0000]    <1>  fld tword [%1]
-   503                              <1> 
-   504 000004C6 E848FBFFFF                call vdot
-   505                                  
-   506                                    vload p
-   506 000004CB DB2C25[8C000000]    <1>  fld tword [%1 + 20]
-   506 000004D2 DB2C25[82000000]    <1>  fld tword [%1 + 10]
-   506 000004D9 DB2C25[78000000]    <1>  fld tword [%1]
+   495                                    vload n1
+   495 0000036E DB2C25[EA0B0000]    <1>  fld tword [%1 + 20]
+   495 00000375 DB2C25[E00B0000]    <1>  fld tword [%1 + 10]
+   495 0000037C DB2C25[D60B0000]    <1>  fld tword [%1]
+   495                              <1> 
+   496 00000383 E88BFCFFFF                call vdot ; n3.p n3.c
+   497                                  
+   498                                  
+   499 00000388 E8CEFCFFFF                call samesign
+   500                                    vload n2
+   500 0000038D DB2C25[080C0000]    <1>  fld tword [%1 + 20]
+   500 00000394 DB2C25[FE0B0000]    <1>  fld tword [%1 + 10]
+   500 0000039B DB2C25[F40B0000]    <1>  fld tword [%1]
+   500                              <1> 
+   501 000003A2 0F85D2000000              jnz .fail ; if not same sign, fail
+   502                                  
+   503 000003A8 9BDBE3                    finit ;reset
+   504                                  ; compare *.n2 signs
+   505                                    vload c
+   505 000003AB DB2C25[14000000]    <1>  fld tword [%1 + 20]
+   505 000003B2 DB2C25[0A000000]    <1>  fld tword [%1 + 10]
+   505 000003B9 DB2C25[00000000]    <1>  fld tword [%1]
+   505                              <1> 
+   506                                    vload n2
+   506 000003C0 DB2C25[080C0000]    <1>  fld tword [%1 + 20]
+   506 000003C7 DB2C25[FE0B0000]    <1>  fld tword [%1 + 10]
+   506 000003CE DB2C25[F40B0000]    <1>  fld tword [%1]
    506                              <1> 
-   507                                    vload n3
-   507 000004E0 DB2C25[260C0000]    <1>  fld tword [%1 + 20]
-   507 000004E7 DB2C25[1C0C0000]    <1>  fld tword [%1 + 10]
-   507 000004EE DB2C25[120C0000]    <1>  fld tword [%1]
-   507                              <1> 
-   508 000004F5 E819FBFFFF                call vdot
-   509                                  
-   510 000004FA E85CFBFFFF                call samesign
-   511 000004FF 751D                      jnz .fail
+   507 000003D5 E839FCFFFF                call vdot
+   508                                  
+   509                                    vload p
+   509 000003DA DB2C25[8C000000]    <1>  fld tword [%1 + 20]
+   509 000003E1 DB2C25[82000000]    <1>  fld tword [%1 + 10]
+   509 000003E8 DB2C25[78000000]    <1>  fld tword [%1]
+   509                              <1> 
+   510                                    vload n2
+   510 000003EF DB2C25[080C0000]    <1>  fld tword [%1 + 20]
+   510 000003F6 DB2C25[FE0B0000]    <1>  fld tword [%1 + 10]
+   510 000003FD DB2C25[F40B0000]    <1>  fld tword [%1]
+   510                              <1> 
+   511 00000404 E80AFCFFFF                call vdot
    512                                  
-   513                                  .success:
-   514                                    echo successmsg, successlen
-   514 00000501 B804000000          <1>  mov rax, 4
-   514 00000506 BB01000000          <1>  mov rbx, 1
-   514 0000050B 48B9-               <1>  mov rcx, %1
-   514 0000050D [AF00000000000000]  <1>
-   514 00000515 BA0C000000          <1>  mov rdx, %2
-   514 0000051A CD80                <1>  int 80h
-   515 0000051C EB6F                      jmp .exit
-   516                                    
-   517                                  .fail:
-   518                                    echo failmsg, faillen
-   518 0000051E B804000000          <1>  mov rax, 4
-   518 00000523 BB01000000          <1>  mov rbx, 1
-   518 00000528 48B9-               <1>  mov rcx, %1
-   518 0000052A [A400000000000000]  <1>
-   518 00000532 BA0B000000          <1>  mov rdx, %2
-   518 00000537 CD80                <1>  int 80h
-   519 00000539 EB52                      jmp .exit
-   520                                  
-   521                                  .comp:
-   522 0000053B DBF1                      fcomi st1
-   523 0000053D 7206                      jb .less
-   524 0000053F 741C                      je .eq
-   525 00000541 7732                      ja .great
-   526 00000543 EB48                      jmp .exit
-   527                                    
-   528                                  .less:
-   529 00000545 B804000000                mov eax, 4
-   530 0000054A BB01000000                mov ebx, 1
-   531 0000054F B9[96000000]              mov ecx, msg1
-   532 00000554 BA05000000                mov edx, len1
-   533 00000559 CD80                      int 80h
-   534 0000055B EB30                      jmp .exit
-   535                                  
-   536                                  .eq:
-   537 0000055D B804000000                mov eax, 4
-   538 00000562 BB01000000                mov ebx, 1
-   539 00000567 B9[9B000000]              mov ecx, msg2
-   540 0000056C BA03000000                mov edx, len2
-   541 00000571 CD80                      int 80h
-   542 00000573 EB18                      jmp .exit
-   543                                  
-   544                                  .great:
-   545 00000575 B804000000                mov eax, 4
-   546 0000057A BB01000000                mov ebx, 1
-   547 0000057F B9[9E000000]              mov ecx, msg3
-   548 00000584 BA06000000                mov edx, len3
-   549 00000589 CD80                      int 80h
-   550 0000058B EB00                      jmp .exit
+   513 00000409 E84DFCFFFF                call samesign
+   514 0000040E 756A                      jnz .fail
+   515                                  
+   516 00000410 9BDBE3                    finit ;reset
+   517                                  ; compare *.n3 signs
+   518                                    vload c
+   518 00000413 DB2C25[14000000]    <1>  fld tword [%1 + 20]
+   518 0000041A DB2C25[0A000000]    <1>  fld tword [%1 + 10]
+   518 00000421 DB2C25[00000000]    <1>  fld tword [%1]
+   518                              <1> 
+   519                                    vload n3
+   519 00000428 DB2C25[260C0000]    <1>  fld tword [%1 + 20]
+   519 0000042F DB2C25[1C0C0000]    <1>  fld tword [%1 + 10]
+   519 00000436 DB2C25[120C0000]    <1>  fld tword [%1]
+   519                              <1> 
+   520 0000043D E8D1FBFFFF                call vdot
+   521                                  
+   522                                    vload p
+   522 00000442 DB2C25[8C000000]    <1>  fld tword [%1 + 20]
+   522 00000449 DB2C25[82000000]    <1>  fld tword [%1 + 10]
+   522 00000450 DB2C25[78000000]    <1>  fld tword [%1]
+   522                              <1> 
+   523                                    vload n3
+   523 00000457 DB2C25[260C0000]    <1>  fld tword [%1 + 20]
+   523 0000045E DB2C25[1C0C0000]    <1>  fld tword [%1 + 10]
+   523 00000465 DB2C25[120C0000]    <1>  fld tword [%1]
+   523                              <1> 
+   524 0000046C E8A2FBFFFF                call vdot
+   525                                  
+   526 00000471 E8E5FBFFFF                call samesign
+   527 00000476 7502                      jnz .fail
+   528                                  
+   529                                  .success:
+   530                                    ; echo successmsg, successlen
+   531 00000478 EB02                      jmp .wrap
+   532                                    
+   533                                  .fail:
+   534                                    ; echo failmsg, faillen
+   535 0000047A EB00                      jmp .wrap
+   536                                  
+   537                                  ; .comp:
+   538                                  ;   fcomi st1
+   539                                  ;   jb .less
+   540                                  ;   je .eq
+   541                                  ;   ja .great
+   542                                  ;   jmp .exit
+   543                                    
+   544                                  ; .less:
+   545                                  ;   mov eax, 4
+   546                                  ;   mov ebx, 1
+   547                                  ;   mov ecx, msg1
+   548                                  ;   mov edx, len1
+   549                                  ;   int 80h
+   550                                  ;   jmp .exit
    551                                  
-   552                                  
-   553                                  .exit:
-   554 0000058D B801000000                mov rax, 1
-   555 00000592 BB00000000                mov rbx, 0
-   556 00000597 CD80                      int 80h
-   557                                  
+   552                                  ; .eq:
+   553                                  ;   mov eax, 4
+   554                                  ;   mov ebx, 1
+   555                                  ;   mov ecx, msg2
+   556                                  ;   mov edx, len2
+   557                                  ;   int 80h
+   558                                  ;   jmp .exit
+   559                                  
+   560                                  ; .great:
+   561                                  ;   mov eax, 4
+   562                                  ;   mov ebx, 1
+   563                                  ;   mov ecx, msg3
+   564                                  ;   mov edx, len3
+   565                                  ;   int 80h
+   566                                  ;   jmp .exit
+   567                                  
+   568                                  .wrap:
+   569                                    timeend r8
+   569 0000047C 0F31                <1>  rdtsc
+   569                              <1>  unpack
+   569 0000047E 48C1E220            <2>  shl rdx, 32
+   569                              <2> 
+   569                              <2> 
+   569 00000482 48C1E020            <2>  shl rax, 32
+   569 00000486 48C1E820            <2>  shr rax, 32
+   569 0000048A 4801D0              <2>  add rax, rdx
+   569 0000048D 4C29C0              <1>  sub rax, %1
+   569                              <1>  bin_str
+   569 00000490 4989C0              <2>  mov r8, rax
+   569                              <2> 
+   569 00000493 41B93F000000        <2>  mov r9,63
+   569 00000499 49D1E0              <2> shift: shl r8,1
+   569 0000049C 721D                <2>  jc .one
+   569                              <2> 
+   569                              <2> 
+   569 0000049E B804000000          <2> .zer: mov rax, 4
+   569 000004A3 BB01000000          <2>  mov rbx, 1
+   569 000004A8 48B9-               <2>  mov rcx, zerchar
+   569 000004AA [BC00000000000000]  <2>
+   569 000004B2 BA01000000          <2>  mov rdx, 1
+   569 000004B7 CD80                <2>  int 80h
+   569 000004B9 EB1D                <2>  jmp .cloop
+   569                              <2> 
+   569                              <2> 
+   569 000004BB B804000000          <2> .one mov rax, 4
+   569 000004C0 BB01000000          <2>  mov rbx, 1
+   569 000004C5 48B9-               <2>  mov rcx, onechar
+   569 000004C7 [BB00000000000000]  <2>
+   569 000004CF BA01000000          <2>  mov rdx, 1
+   569 000004D4 CD80                <2>  int 80h
+   569 000004D6 EB00                <2>  jmp .cloop
+   569                              <2> 
+   569                              <2> 
+   569 000004D8 49FFC9              <2> .cloop: dec r9
+   569 000004DB 4983F900            <2>  cmp r9,0
+   569 000004DF 7DB8                <2>  jge shift
+   569                              <2> 
+   569                              <2> 
+   569 000004E1 B804000000          <2>  mov rax, 4
+   569 000004E6 BA01000000          <2>  mov rdx, 1
+   569 000004EB 48B9-               <2>  mov rcx, nlchar
+   569 000004ED [BD00000000000000]  <2>
+   569 000004F5 BA01000000          <2>  mov rdx, 1
+   569 000004FA CD80                <2>  int 80h
+   570                                  .exit:
+   571 000004FC B801000000                mov rax, 1
+   572 00000501 BB00000000                mov rbx, 0
+   573 00000506 CD80                      int 80h
+   574                                  
