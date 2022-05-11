@@ -11,6 +11,7 @@ arr	bubblesort/main.asm	/^arr:  db 7, 5, 6, 7, 3, 2, 9, 5$/;"	d
 arrlen	bubblesort/main.asm	/^arrlen: equ $ - arr$/;"	d
 c	intri/main.asm	/^c rest 3$/;"	l
 cross	intri/main.asm	/^cross:$/;"	l
+cross	intri/ref.c	/^double cross(double *v, double *w)$/;"	f
 faillen	intri/main.asm	/^faillen equ $ - failmsg$/;"	d
 failmsg	intri/main.asm	/^failmsg db "fails test", 10$/;"	d
 finv	intri/main.asm	/^finv:$/;"	l
@@ -25,6 +26,7 @@ len3	intri/floatcomp.asm	/^len3 equ $ - msg3$/;"	d
 len3	intri/main.asm	/^len3 equ $ - msg3$/;"	d
 loop1	bubblesort/main.asm	/^loop1:  $/;"	l
 loop2	bubblesort/main.asm	/^loop2:  $/;"	l
+main	intri/ref.c	/^int main()$/;"	f
 msg1	intri/floatcomp.asm	/^msg1 db "less", 10$/;"	d
 msg1	intri/main.asm	/^msg1 db "less", 10$/;"	d
 msg2	intri/floatcomp.asm	/^msg2 db "greater", 10$/;"	d
