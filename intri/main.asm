@@ -89,29 +89,29 @@ section .text
         mov r8, rax ; we need rax, so store elsewhere
 
         mov r9,63  ; run 63+1 = 64 times
-shift:  shl r8,1   ; shift rightmost bit into carry flag
-        jc .one     ; if bit is 1, jump
+%%shift:  shl r8,1   ; shift rightmost bit into carry flag
+        jc %%one     ; if bit is 1, jump
 
 ; print 0
-.zer:   mov rax, 4
+%%zer:   mov rax, 4
         mov rbx, 1
         mov rcx, zerchar
         mov rdx, 1
         int 80h
-        jmp .cloop              ; jump to loop check
+        jmp %%cloop              ; jump to loop check
 
 ; print 1
-.one    mov rax, 4
+%%one    mov rax, 4
         mov rbx, 1
         mov rcx, onechar
         mov rdx, 1
         int 80h
-        jmp .cloop              ; jump to loop check
+        jmp %%cloop              ; jump to loop check
 
 ; loop check
-.cloop: dec r9                 ; dec bit counter
+%%cloop: dec r9                 ; dec bit counter
         cmp r9,0               ; compare bit counter with 0
-        jge shift               ; if (signed) greater, equal 0, loop
+        jge %%shift               ; if (signed) greater, equal 0, loop
 
 ; print newline
         mov rax, 4
@@ -461,6 +461,9 @@ _start:
   finit ; reset fpuregs
 
 timestart r8
+timeend r8
+jmp .exit
+; jmp .wrap
 
   vload p ; p
   call norm ; |p|
