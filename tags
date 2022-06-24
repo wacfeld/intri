@@ -4,79 +4,68 @@
 !_TAG_PROGRAM_NAME	Exuberant Ctags	//
 !_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
 !_TAG_PROGRAM_VERSION	5.9~svn20110310	//
-_start	bubblesort/main.asm	/^_start:$/;"	l
-_start	intri/clean.asm	/^_start:$/;"	l
-_start	intri/floatcomp.asm	/^_start:$/;"	l
-_start	intri/main.asm	/^_start:$/;"	l
-arr	bubblesort/main.asm	/^arr:  db 7, 5, 6, 7, 3, 2, 9, 5$/;"	d
-arrlen	bubblesort/main.asm	/^arrlen: equ $ - arr$/;"	d
-c	intri/main.asm	/^c rest 3$/;"	l
-cross	intri/main.asm	/^cross:$/;"	l
-cross	intri/ref.c	/^double cross(double *v, double *w)$/;"	f
-faillen	intri/main.asm	/^faillen equ $ - failmsg$/;"	d
-failmsg	intri/main.asm	/^failmsg db "fails test", 10$/;"	d
-finv	intri/main.asm	/^finv:$/;"	l
-global	bubblesort/main.asm	/^global _start$/;"	l
-global	intri/clean.asm	/^global _start$/;"	l
-global	intri/floatcomp.asm	/^global _start$/;"	l
-global	intri/main.asm	/^global _start$/;"	l
-jmp	intri/main.asm	/^jmp .exit$/;"	l
-len1	intri/floatcomp.asm	/^len1 equ $ - msg1$/;"	d
-len1	intri/main.asm	/^len1 equ $ - msg1$/;"	d
-len2	intri/floatcomp.asm	/^len2 equ $ - msg2$/;"	d
-len2	intri/main.asm	/^len2 equ $ - msg2$/;"	d
-len3	intri/floatcomp.asm	/^len3 equ $ - msg3$/;"	d
-len3	intri/main.asm	/^len3 equ $ - msg3$/;"	d
-loop1	bubblesort/main.asm	/^loop1:  $/;"	l
-loop2	bubblesort/main.asm	/^loop2:  $/;"	l
-main	intri/generate.c	/^int main() {$/;"	f
-main	intri/ref.c	/^int main()$/;"	f
-msg1	intri/floatcomp.asm	/^msg1 db "less", 10$/;"	d
-msg1	intri/main.asm	/^msg1 db "less", 10$/;"	d
-msg2	intri/floatcomp.asm	/^msg2 db "greater", 10$/;"	d
-msg2	intri/main.asm	/^msg2 db "eq", 10$/;"	d
-msg3	intri/floatcomp.asm	/^msg3 db "equal", 10$/;"	d
-msg3	intri/main.asm	/^msg3 db "great", 10$/;"	d
-n1	intri/main.asm	/^n1 rest 3$/;"	l
-n2	intri/main.asm	/^n2 rest 3$/;"	l
-n3	intri/main.asm	/^n3 rest 3$/;"	l
-nlchar	intri/clean.asm	/^  nlchar db 10$/;"	d
-nlchar	intri/main.asm	/^nlchar db 10$/;"	d
-norm	intri/main.asm	/^norm:$/;"	l
-noswap	bubblesort/main.asm	/^noswap: $/;"	l
-onechar	intri/clean.asm	/^  onechar db "1"$/;"	d
-onechar	intri/main.asm	/^onechar db "1"$/;"	d
-origin	intri/main.asm	/^origin dt 0.0, 0.0, 0.0$/;"	d
-p	intri/main.asm	/^p dt -0.92, 0.16, -0.37$/;"	d
-putv	intri/generate.c	/^void putv(double *v)$/;"	f
-randf	intri/generate.c	/^double randf(double a)$/;"	f
-samesign	intri/main.asm	/^samesign:$/;"	l
-section	bubblesort/main.asm	/^section .data$/;"	l
-section	bubblesort/main.asm	/^section .text$/;"	l
-section	intri/clean.asm	/^section .data$/;"	l
-section	intri/clean.asm	/^section .text$/;"	l
-section	intri/floatcomp.asm	/^section .data$/;"	l
-section	intri/floatcomp.asm	/^section .text$/;"	l
-section	intri/main.asm	/^section .bss$/;"	l
-section	intri/main.asm	/^section .data$/;"	l
-section	intri/main.asm	/^section .text$/;"	l
-space	bubblesort/main.asm	/^space:  db 32$/;"	d
-successlen	intri/main.asm	/^successlen equ $ - successmsg$/;"	d
-successmsg	intri/main.asm	/^successmsg db "passes test", 10$/;"	d
-temp111	intri/main.asm	/^temp111 rest 300$/;"	l
-temp222	intri/main.asm	/^temp222 rest 300$/;"	l
-timeend	intri/main.asm	/^timeend r8$/;"	l
-timestart	intri/main.asm	/^timestart r8$/;"	l
-top	bubblesort/main.asm	/^top: $/;"	l
-unit	intri/generate.c	/^void unit(double *v)$/;"	f
-v1	intri/main.asm	/^v1 dt -0.93, 0.22, -0.29$/;"	d
-v2	intri/main.asm	/^v2 dt -0.76, -0.41, -0.51$/;"	d
-v3	intri/main.asm	/^v3 dt -0.67, 0.1, -0.74$/;"	d
-vadd	intri/main.asm	/^vadd:$/;"	l
-vdot	intri/main.asm	/^vdot:$/;"	l
-vmul	intri/main.asm	/^vmul:$/;"	l
-vsub	intri/main.asm	/^vsub:$/;"	l
-x	intri/floatcomp.asm	/^x dt 3.14$/;"	d
-y	intri/floatcomp.asm	/^y dt 3.14$/;"	d
-zerchar	intri/clean.asm	/^  zerchar db "0"$/;"	d
-zerchar	intri/main.asm	/^zerchar db "0"$/;"	d
+_start	/home/wacfeld/mat/asm/clean.asm	/^_start:$/;"	l
+_start	/home/wacfeld/mat/asm/floatcomp.asm	/^_start:$/;"	l
+_start	/home/wacfeld/mat/asm/main.asm	/^_start:$/;"	l
+c	/home/wacfeld/mat/asm/main.asm	/^c rest 3$/;"	l
+cross	/home/wacfeld/mat/asm/main.asm	/^cross:$/;"	l
+cross	/home/wacfeld/mat/asm/ref.c	/^double cross(double *v, double *w)$/;"	f
+faillen	/home/wacfeld/mat/asm/main.asm	/^faillen equ $ - failmsg$/;"	d
+failmsg	/home/wacfeld/mat/asm/main.asm	/^failmsg db "fails test", 10$/;"	d
+finv	/home/wacfeld/mat/asm/main.asm	/^finv:$/;"	l
+global	/home/wacfeld/mat/asm/clean.asm	/^global _start$/;"	l
+global	/home/wacfeld/mat/asm/floatcomp.asm	/^global _start$/;"	l
+global	/home/wacfeld/mat/asm/main.asm	/^global _start$/;"	l
+jmp	/home/wacfeld/mat/asm/main.asm	/^jmp .exit$/;"	l
+len1	/home/wacfeld/mat/asm/floatcomp.asm	/^len1 equ $ - msg1$/;"	d
+len1	/home/wacfeld/mat/asm/main.asm	/^len1 equ $ - msg1$/;"	d
+len2	/home/wacfeld/mat/asm/floatcomp.asm	/^len2 equ $ - msg2$/;"	d
+len2	/home/wacfeld/mat/asm/main.asm	/^len2 equ $ - msg2$/;"	d
+len3	/home/wacfeld/mat/asm/floatcomp.asm	/^len3 equ $ - msg3$/;"	d
+len3	/home/wacfeld/mat/asm/main.asm	/^len3 equ $ - msg3$/;"	d
+main	/home/wacfeld/mat/asm/generate.c	/^int main() {$/;"	f
+main	/home/wacfeld/mat/asm/ref.c	/^int main()$/;"	f
+msg1	/home/wacfeld/mat/asm/floatcomp.asm	/^msg1 db "less", 10$/;"	d
+msg1	/home/wacfeld/mat/asm/main.asm	/^msg1 db "less", 10$/;"	d
+msg2	/home/wacfeld/mat/asm/floatcomp.asm	/^msg2 db "greater", 10$/;"	d
+msg2	/home/wacfeld/mat/asm/main.asm	/^msg2 db "eq", 10$/;"	d
+msg3	/home/wacfeld/mat/asm/floatcomp.asm	/^msg3 db "equal", 10$/;"	d
+msg3	/home/wacfeld/mat/asm/main.asm	/^msg3 db "great", 10$/;"	d
+n1	/home/wacfeld/mat/asm/main.asm	/^n1 rest 3$/;"	l
+n2	/home/wacfeld/mat/asm/main.asm	/^n2 rest 3$/;"	l
+n3	/home/wacfeld/mat/asm/main.asm	/^n3 rest 3$/;"	l
+nlchar	/home/wacfeld/mat/asm/clean.asm	/^  nlchar db 10$/;"	d
+nlchar	/home/wacfeld/mat/asm/main.asm	/^nlchar db 10$/;"	d
+norm	/home/wacfeld/mat/asm/main.asm	/^norm:$/;"	l
+onechar	/home/wacfeld/mat/asm/clean.asm	/^  onechar db "1"$/;"	d
+onechar	/home/wacfeld/mat/asm/main.asm	/^onechar db "1"$/;"	d
+origin	/home/wacfeld/mat/asm/main.asm	/^origin dt 0.0, 0.0, 0.0$/;"	d
+p	/home/wacfeld/mat/asm/main.asm	/^p dt -0.92, 0.16, -0.37$/;"	d
+putv	/home/wacfeld/mat/asm/generate.c	/^void putv(double *v)$/;"	f
+randf	/home/wacfeld/mat/asm/generate.c	/^double randf(double a)$/;"	f
+samesign	/home/wacfeld/mat/asm/main.asm	/^samesign:$/;"	l
+section	/home/wacfeld/mat/asm/clean.asm	/^section .data$/;"	l
+section	/home/wacfeld/mat/asm/clean.asm	/^section .text$/;"	l
+section	/home/wacfeld/mat/asm/floatcomp.asm	/^section .data$/;"	l
+section	/home/wacfeld/mat/asm/floatcomp.asm	/^section .text$/;"	l
+section	/home/wacfeld/mat/asm/main.asm	/^section .bss$/;"	l
+section	/home/wacfeld/mat/asm/main.asm	/^section .data$/;"	l
+section	/home/wacfeld/mat/asm/main.asm	/^section .text$/;"	l
+successlen	/home/wacfeld/mat/asm/main.asm	/^successlen equ $ - successmsg$/;"	d
+successmsg	/home/wacfeld/mat/asm/main.asm	/^successmsg db "passes test", 10$/;"	d
+temp111	/home/wacfeld/mat/asm/main.asm	/^temp111 rest 300$/;"	l
+temp222	/home/wacfeld/mat/asm/main.asm	/^temp222 rest 300$/;"	l
+timeend	/home/wacfeld/mat/asm/main.asm	/^timeend r8$/;"	l
+timestart	/home/wacfeld/mat/asm/main.asm	/^timestart r8$/;"	l
+unit	/home/wacfeld/mat/asm/generate.c	/^void unit(double *v)$/;"	f
+v1	/home/wacfeld/mat/asm/main.asm	/^v1 dt -0.93, 0.22, -0.29$/;"	d
+v2	/home/wacfeld/mat/asm/main.asm	/^v2 dt -0.76, -0.41, -0.51$/;"	d
+v3	/home/wacfeld/mat/asm/main.asm	/^v3 dt -0.67, 0.1, -0.74$/;"	d
+vadd	/home/wacfeld/mat/asm/main.asm	/^vadd:$/;"	l
+vdot	/home/wacfeld/mat/asm/main.asm	/^vdot:$/;"	l
+vmul	/home/wacfeld/mat/asm/main.asm	/^vmul:$/;"	l
+vsub	/home/wacfeld/mat/asm/main.asm	/^vsub:$/;"	l
+x	/home/wacfeld/mat/asm/floatcomp.asm	/^x dt 3.14$/;"	d
+y	/home/wacfeld/mat/asm/floatcomp.asm	/^y dt 3.14$/;"	d
+zerchar	/home/wacfeld/mat/asm/clean.asm	/^  zerchar db "0"$/;"	d
+zerchar	/home/wacfeld/mat/asm/main.asm	/^zerchar db "0"$/;"	d
